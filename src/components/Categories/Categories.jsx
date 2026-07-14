@@ -136,8 +136,8 @@ function AddCategoryModal({ open, onClose }) {
                   <span className="text-[10px] text-stone-400">Empty</span>
                 )}
               </div>
-              <div className="col-span-1 h-16 rounded-lg border border-dashed border-stone-200 bg-stone-50" />
-              <div className="col-span-1 h-16 rounded-lg border border-dashed border-stone-200 bg-stone-50" />
+              {/* <div className="col-span-1 h-16 rounded-lg border border-dashed border-stone-200 bg-stone-50" />
+              <div className="col-span-1 h-16 rounded-lg border border-dashed border-stone-200 bg-stone-50" /> */}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -210,7 +210,7 @@ function CategoryCard({ cat, openMenu, onToggleMenu, onRemove }) {
     <div className="relative flex items-center gap-3 rounded-2xl bg-white border border-stone-100 shadow-sm px-4 py-3">
       {imgSrc ? (
         <img
-          src={imgSrc}
+          src={cat.image}
           alt={cat.name}
           className="h-11 w-11 rounded-lg object-cover shrink-0"
         />
