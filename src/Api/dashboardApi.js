@@ -374,6 +374,25 @@ export const authApi = api.injectEndpoints({
       invalidatesTags: ["business"],
     }),
 
+    // Update a business
+    updateBusiness: builder.mutation({
+      query: ({ id, ...body }) => ({
+        url: `admin/business/${id}/`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: ["business"],
+    }),
+
+    // Delete a business
+    deleteBusiness: builder.mutation({
+      query: (id) => ({
+        url: `admin/business/${id}/`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["business"],
+    }),
+
     // Get categories
     getCategories: builder.query({
       query: () => ({
@@ -460,4 +479,6 @@ export const {
   useCreateCategoryMutation,
   useDeleteCategoryMutation,
   useUploadMediaMutation,
+  useUpdateBusinessMutation,
+  useDeleteBusinessMutation,
 } = authApi;

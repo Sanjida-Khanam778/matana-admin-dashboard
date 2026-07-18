@@ -261,7 +261,7 @@ export default function RequestsPanel() {
   const { data: businesses, isLoading, isError, error } = useGetBusinessesListQuery();
 
   return (
-    <div className="min-h-screen bg-[#F4F1EA] p-6 sm:p-10">
+    <div className="bg-[#F4F1EA] p-6 sm:p-10">
       <div className="mx-auto max-w-5xl">
         <div className="mb-6">
           <h1 className="text-xl font-bold text-stone-900">Requests Panel</h1>

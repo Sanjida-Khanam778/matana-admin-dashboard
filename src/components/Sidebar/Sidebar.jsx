@@ -1,26 +1,22 @@
-import { Link, NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import "./Sidebar.css";
-import { LuCircleUserRound, LuDollarSign, LuDumbbell, LuSettings } from "react-icons/lu";
+import { LuCircleUserRound, LuDollarSign, LuDumbbell } from "react-icons/lu";
 import { LogOut } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { logout } from "../../features/authSlice";
-import logo from "../../assets/images/logo.png";
 import { TbDiamond } from "react-icons/tb";
 import { RxDashboard } from "react-icons/rx";
-import { PiShoppingBagOpenBold } from "react-icons/pi";
-import { SiMarketo } from "react-icons/si";
 export default function Sidebar() {
   const dispatch = useDispatch();
-  const location = useLocation();
   const handleLogout = () => {
     dispatch(logout());
   };
   return (
-    <div className=" bg-primary text-white h-screen sticky left-0 z-20 flex flex-col justify-between w-48 md:w-64 xl:w-72">
+    <div className="bg-primary text-white h-screen sticky left-0 z-20 flex flex-col justify-between w-48 md:w-64 xl:w-72">
       {/* Ober Logo */}
       <div className="mt-12 flex justify-center">
         <div className="bg-primary rounded-2xl flex items-center justify-center">
-          <img src={'/logo.png'} alt="Logo" className="w-full h-full object-contain" />
+          <img src={'/logoFooter.png'} alt="Logo" className="w-full h-full object-contain" />
         </div>
       </div>
 
