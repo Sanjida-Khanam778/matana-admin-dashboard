@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import { Search, ChevronDown, Pencil, Trash2, X, Loader2, AlertCircle } from "lucide-react";
 import {
   useGetBusinessesListQuery,
+  useGetBusinessByIdQuery,
   useUpdateBusinessMutation,
   useDeleteBusinessMutation,
 } from "../../Api/dashboardApi";
+import { useGetCommunitiesQuery } from "../../Api/businessDirectoryApi";
 
 /* ─── helpers ───*/
 
@@ -14,6 +16,28 @@ function resolveUrl(url) {
   if (!url) return null;
   if (url.startsWith("http")) return url;
   return `${BASE}${url}`;
+}
+
+function getFlyerUrl(flyerImage) {
+  if (typeof flyerImage === "string") return resolveUrl(flyerImage);
+  return resolveUrl(flyerImage?.url);
+}
+
+function getCommunityName(business) {
+  if (!business) return "";
+  if (typeof business.community === "string") return business.community;
+  return business.community?.name ?? business.city ?? "";
+}
+
+function getCategoryNames(categories) {
+  if (!categories?.length) return "—";
+  return categories.map((category) => category.name ?? category).join(", ");
+}
+
+function getPlanLabel(business) {
+  if (!business?.plan) return "—";
+  const price = business.final_price ?? business.plan.final_price ?? business.plan.base_price;
+  return `${business.plan.tier}${price ? ` · $${price}` : ""}`;
 }
 
 const STATUS_OPTIONS = ["PENDING", "APPROVED", "REJECTED", "SUSPENDED"];
@@ -114,7 +138,6 @@ const FIELD_INPUT = (label, key, type = "text") => ({ label, key, type });
 const FIELDS_LEFT = [
   FIELD_INPUT("Business Name",    "name"),
   FIELD_INPUT("Description",      "description"),
-  FIELD_INPUT("City",             "city"),
   FIELD_INPUT("Business Address", "business_address"),
   FIELD_INPUT("Business Phone",   "business_phone"),
   FIELD_INPUT("Business Hours",   "business_hours"),
@@ -146,55 +169,91 @@ function Field({ label, value, onChange, type = "text" }) {
   );
 }
 
+function CityField({ value, onChange, communities, isLoading }) {
+  const hasSelectedCity = communities.some((community) => community.name === value);
+
+  return (
+    <div className="space-y-1.5">
+      <label className="text-xs font-medium text-stone-500">City</label>
+      <select
+        value={value ?? ""}
+        onChange={onChange}
+        disabled={isLoading}
+        className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition disabled:cursor-not-allowed disabled:bg-stone-50 disabled:text-stone-400"
+      >
+        <option value="">{isLoading ? "Loading cities..." : "Select a city"}</option>
+        {value && !hasSelectedCity && <option value={value}>{value}</option>}
+        {communities.map((community) => (
+          <option key={community.id} value={community.name}>
+            {community.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 function EditModal({ business, onClose, onSave, isSaving }) {
   const [form, setForm] = useState({});
+  const { data: communities = [], isLoading: communitiesLoading } = useGetCommunitiesQuery();
+  const {
+    data: businessDetails,
+    isLoading: detailsLoading,
+    isError: detailsError,
+  } = useGetBusinessByIdQuery(business?.id, {
+    skip: !business?.id,
+  });
+  const activeBusiness = businessDetails ?? business;
 
   useEffect(() => {
-    if (business) {
+    if (activeBusiness) {
       setForm({
-        name:               business.name ?? "",
-        description:        business.description ?? "",
-        status:             business.status ?? "PENDING",
-        is_featured:        business.is_featured ?? false,
-        contact_email:      business.contact_email ?? "",
-        contact_name:       business.contact_name ?? "",
-        contact_phone:      business.contact_phone ?? "",
-        city:               business.city ?? "",
-        business_address:   business.business_address ?? "",
-        business_phone:     business.business_phone ?? "",
-        business_hours:     business.business_hours ?? "",
-        instagram:          business.instagram ?? "",
-        facebook:           business.facebook ?? "",
-        other_social_link:  business.other_social_link ?? "",
-        serving_areas:      business.serving_areas ?? "",
-        services_tags:      business.services_tags ?? "",
-        website:            business.website ?? "",
-        promo_video_link:   business.promo_video_link ?? "",
+        name:               activeBusiness.name ?? "",
+        description:        activeBusiness.description ?? "",
+        status:             activeBusiness.status ?? "PENDING",
+        is_featured:        activeBusiness.is_featured ?? false,
+        contact_email:      activeBusiness.contact_email ?? "",
+        contact_name:       activeBusiness.contact_name ?? "",
+        contact_phone:      activeBusiness.contact_phone ?? "",
+        city:               getCommunityName(activeBusiness),
+        business_address:   activeBusiness.business_address ?? "",
+        business_phone:     activeBusiness.business_phone ?? "",
+        business_hours:     activeBusiness.business_hours ?? "",
+        instagram:          activeBusiness.instagram ?? "",
+        facebook:           activeBusiness.facebook ?? "",
+        other_social_link:  activeBusiness.other_social_link ?? "",
+        serving_areas:      activeBusiness.serving_areas ?? "",
+        services_tags:      activeBusiness.services_tags ?? "",
+        website:            activeBusiness.website ?? "",
+        promo_video_link:   activeBusiness.promo_video_link ?? "",
       });
     }
-  }, [business]);
+  }, [activeBusiness]);
 
   if (!business) return null;
 
   const update = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
-  const flyerUrl  = resolveUrl(business.flyer_image?.url);
+  const flyerUrl = getFlyerUrl(activeBusiness.flyer_image);
   const categories = business.categories?.map((c) => c.name).join(", ") || "—";
   const planLabel  = business.plan
     ? `${business.plan.tier} · $${business.plan.final_price}`
     : "—";
 
-  const handleSubmit = () => onSave({ id: business.id, ...form });
+  const detailCategories = getCategoryNames(activeBusiness.categories);
+  const detailPlanLabel = getPlanLabel(activeBusiness);
+
+  const handleSubmit = () => onSave({ id: activeBusiness.id, ...form });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 backdrop-blur-[2px] p-4">
-      <div className="w-full max-w-3xl rounded-2xl bg-white shadow-xl max-h-[90vh] overflow-y-auto">
+      <div className="relative w-full max-w-3xl rounded-2xl bg-white shadow-xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-stone-100">
           <div>
             <h2 className="text-base font-bold text-stone-900">Edit Business</h2>
             <p className="text-xs text-stone-500 mt-0.5">
-              ID #{business.id} · {categories}
+              ID #{activeBusiness.id} · {detailsLoading ? "Loading details..." : detailCategories || categories}
             </p>
           </div>
           <button
@@ -205,13 +264,19 @@ function EditModal({ business, onClose, onSave, isSaving }) {
           </button>
         </div>
 
+        {detailsError && (
+          <div className="mx-6 mt-4 rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+            Failed to load full business details. Showing available list data.
+          </div>
+        )}
+
         <div className="px-6 py-5 space-y-6">
           {/* Top row: flyer + meta */}
           <div className="flex gap-5">
             {flyerUrl ? (
               <img
                 src={flyerUrl}
-                alt={business.name}
+                alt={activeBusiness.name}
                 className="h-28 w-28 rounded-xl object-cover shrink-0 border border-stone-100"
               />
             ) : (
@@ -238,7 +303,7 @@ function EditModal({ business, onClose, onSave, isSaving }) {
                 <label className="text-xs font-medium text-stone-500">Plan</label>
                 <input
                   readOnly
-                  value={planLabel}
+                  value={detailPlanLabel || planLabel}
                   className="w-full rounded-lg border border-stone-100 bg-stone-50 px-3 py-2.5 text-sm text-stone-500 outline-none cursor-not-allowed"
                 />
               </div>
@@ -268,7 +333,16 @@ function EditModal({ business, onClose, onSave, isSaving }) {
 
           {/* Two-column field grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {FIELDS_LEFT.map(({ label, key, type }) => (
+            {FIELDS_LEFT.slice(0, 2).map(({ label, key, type }) => (
+              <Field key={key} label={label} value={form[key]} onChange={update(key)} type={type} />
+            ))}
+            <CityField
+              value={form.city}
+              onChange={update("city")}
+              communities={communities}
+              isLoading={communitiesLoading}
+            />
+            {FIELDS_LEFT.slice(2).map(({ label, key, type }) => (
               <Field key={key} label={label} value={form[key]} onChange={update(key)} type={type} />
             ))}
             {FIELDS_RIGHT.map(({ label, key, type }) => (
@@ -294,6 +368,14 @@ function EditModal({ business, onClose, onSave, isSaving }) {
             Save Changes
           </button>
         </div>
+        {detailsLoading && (
+          <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-white/60 backdrop-blur-[1px]">
+            <div className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm text-stone-500 shadow-sm">
+              <Loader2 size={16} className="animate-spin" />
+              Loading business details...
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -340,7 +422,7 @@ export default function AllBusinessListing() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F1EA] p-6 sm:p-10">
+    <div className="bg-[#F4F1EA] p-6 sm:p-10">
       <div className="mx-auto max-w-6xl">
         <h1 className="text-xl font-bold text-stone-900 mb-4">All Business Listing</h1>
 
@@ -401,8 +483,8 @@ export default function AllBusinessListing() {
               </thead>
               <tbody>
                 {filtered.map((b, i) => {
-                  const imgUrl     = resolveUrl(b.flyer_image?.url);
-                  const catNames   = b.categories?.map((c) => c.name).join(", ") || "—";
+                  const imgUrl     = getFlyerUrl(b.flyer_image);
+                  const catNames   = getCategoryNames(b.categories);
                   const planLabel  = b.plan?.tier ?? "—";
 
                   return (
@@ -431,7 +513,7 @@ export default function AllBusinessListing() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-stone-500 max-w-[180px] truncate">{catNames}</td>
-                      <td className="px-6 py-4 text-stone-500">{b.city || "—"}</td>
+                      <td className="px-6 py-4 text-stone-500">{getCommunityName(b) || "—"}</td>
                       <td className="px-6 py-4 text-stone-500 capitalize">{planLabel}</td>
                       <td className="px-6 py-4">
                         <StatusPill status={b.status} />

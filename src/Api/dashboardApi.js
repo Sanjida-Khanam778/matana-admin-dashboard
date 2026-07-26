@@ -356,6 +356,15 @@ export const authApi = api.injectEndpoints({
       providesTags: ["business"],
     }),
 
+    // Business details
+    getBusinessById: builder.query({
+      query: (id) => ({
+        url: `businesses/${id}/`,
+        method: "GET",
+      }),
+      providesTags: (result, error, id) => [{ type: "business", id }],
+    }),
+
     // Approve a business
     approveBusiness: builder.mutation({
       query: (id) => ({
@@ -473,6 +482,7 @@ export const {
   useUpdatePlatformAdminProfileMutation,
   useGetCommisionRateQuery,
   useGetBusinessesListQuery,
+  useGetBusinessByIdQuery,
   useApproveBusinessMutation,
   useRejectBusinessMutation,
   useGetCategoriesQuery,
