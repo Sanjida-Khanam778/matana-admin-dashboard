@@ -25,6 +25,8 @@ export const api = createApi({
     "payments",
     "business",
     "category",
+    "community",
+    "messages",
   ],
   endpoints: () => ({}),
 });

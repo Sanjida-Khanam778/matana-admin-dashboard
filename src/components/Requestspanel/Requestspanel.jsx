@@ -283,7 +283,7 @@ export default function RequestsPanel() {
           </p>
         </div>
 
-        <div className="flex gap-3 mb-6">
+        {/* <div className="flex gap-3 mb-6">
           <button
             onClick={() => setTab("new")}
             className={`rounded-full px-4 py-2 text-xs font-medium border transition-colors ${
@@ -304,7 +304,7 @@ export default function RequestsPanel() {
           >
             Updated Request (2)
           </button>
-        </div>
+        </div> */}
 
         {tab === "new" ? (
           <>

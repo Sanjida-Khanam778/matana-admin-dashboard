@@ -8,6 +8,8 @@ import Overview from "../components/Overview/Overview";
 import RequestsPanel from "../components/Requestspanel/Requestspanel";
 import AllBusinessListing from "../components/Allbusinesslisting/Allbusinesslisting";
 import Pricing from "../components/Pricing/Pricing";
+import Message from "../components/Message/Message";
+import Communities from "../components/Communities/Communities";
 
 export const router = createBrowserRouter([
   {
@@ -36,12 +38,20 @@ export const router = createBrowserRouter([
         element: <Categories />,
       },
       {
+        path: "/communities",
+        element: <Communities />,
+      },
+      {
         path: "/profile",
         element: <Profile />,
       },
       {
         path: "/pricing",
         element: <Pricing />,
+      },
+      {
+        path: "/message",
+        element: <Message />,
       },
 
     

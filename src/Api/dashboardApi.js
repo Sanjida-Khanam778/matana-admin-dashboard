@@ -136,6 +136,14 @@ export const authApi = api.injectEndpoints({
       providesTags: ["notifications"],
     }),
 
+    getAdminMessages: builder.query({
+      query: () => ({
+        url: "admin/messages/",
+        method: "GET",
+      }),
+      providesTags: ["messages"],
+    }),
+
     deleteNotification: builder.mutation({
       query: (id) => ({
         url: `platform/admin/notifications/delete/${id}/`,
@@ -438,6 +446,32 @@ export const authApi = api.injectEndpoints({
         body: formData,
       }),
     }),
+
+    // Communities
+    getCommunities: builder.query({
+      query: () => ({
+        url: "communities/",
+        method: "GET",
+      }),
+      providesTags: ["community"],
+    }),
+
+    createCommunity: builder.mutation({
+      query: (body) => ({
+        url: "communities/",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["community"],
+    }),
+
+    deleteCommunity: builder.mutation({
+      query: (id) => ({
+        url: `communities/${id}/`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["community"],
+    }),
   }),
 });
 
@@ -466,6 +500,7 @@ export const {
   useGetPlatformTransactionsQuery,
   useGetPlatformPaymentsQuery,
   useGetPlatformNotificationsQuery,
+  useGetAdminMessagesQuery,
   useDeleteNotificationMutation,
   useGetPlatformAboutUsQuery,
   useUpdatePlatformAboutUsMutation,
@@ -491,4 +526,7 @@ export const {
   useUploadMediaMutation,
   useUpdateBusinessMutation,
   useDeleteBusinessMutation,
+  useGetCommunitiesQuery,
+  useCreateCommunityMutation,
+  useDeleteCommunityMutation,
 } = authApi;

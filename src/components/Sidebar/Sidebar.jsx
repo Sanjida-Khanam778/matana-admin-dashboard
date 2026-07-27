@@ -1,6 +1,6 @@
 import { Link, NavLink } from "react-router-dom";
 import "./Sidebar.css";
-import { LuCircleUserRound, LuDollarSign, LuDumbbell } from "react-icons/lu";
+import { LuCircleUserRound, LuDollarSign, LuDumbbell, LuMapPin } from "react-icons/lu";
 import { LogOut } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { logout } from "../../features/authSlice";
@@ -53,6 +53,24 @@ export default function Sidebar() {
             >
               <LuDumbbell className="text-xl mr-3 -rotate-45" />
               Categories
+            </NavLink>
+          </li>
+          <li>
+            <NavLink
+              to={"/communities"}
+              className="flex items-center px-8 py-4 hover:bg-white hover:text-primary"
+            >
+              <LuMapPin className="text-xl mr-3" />
+              Communities
+            </NavLink>
+          </li>
+          <li>
+            <NavLink
+              to={"/message"}
+              className="flex items-center px-8 py-4 hover:bg-white hover:text-primary"
+            >
+              <LuDollarSign className="text-xl mr-3" />
+            Message
             </NavLink>
           </li>
           <li>
