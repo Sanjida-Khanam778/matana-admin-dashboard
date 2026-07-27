@@ -65,7 +65,8 @@ function AddCategoryModal({ open, onClose }) {
       retryFormData.append("image", selectedFile);
       try {
         const res = await uploadMedia(retryFormData).unwrap();
-        setImageId(res.id);
+        console.log(res)
+        setImageId(res[0].id);
         toast.success("Image uploaded successfully!");
       } catch (retryErr) {
         toast.error("Failed to upload cover image.");
@@ -157,29 +158,7 @@ function AddCategoryModal({ open, onClose }) {
             />
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-stone-500">
-              Associated Occasions
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {occasions.map((o) => {
-                const active = selected.includes(o);
-                return (
-                  <button
-                    key={o}
-                    onClick={() => toggleOccasion(o)}
-                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                      active
-                        ? "border-emerald-600 bg-emerald-50 text-emerald-700"
-                        : "border-stone-200 text-stone-600 hover:border-stone-300"
-                    }`}
-                  >
-                    {o}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+     
         </div>
 
         <div className="flex gap-3 px-6 pb-6">

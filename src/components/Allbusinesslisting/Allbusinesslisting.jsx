@@ -1,10 +1,21 @@
-import { useState, useEffect } from "react";
-import { Search, ChevronDown, Pencil, Trash2, X, Loader2, AlertCircle } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import {
+  Search,
+  ChevronDown,
+  Pencil,
+  Trash2,
+  X,
+  Loader2,
+  AlertCircle,
+  AlertTriangle,
+  Upload,
+} from "lucide-react";
 import {
   useGetBusinessesListQuery,
   useGetBusinessByIdQuery,
   useUpdateBusinessMutation,
   useDeleteBusinessMutation,
+  useUploadMediaMutation,
 } from "../../Api/dashboardApi";
 import { useGetCommunitiesQuery } from "../../Api/businessDirectoryApi";
 
@@ -22,6 +33,71 @@ function getFlyerUrl(flyerImage) {
   if (typeof flyerImage === "string") return resolveUrl(flyerImage);
   return resolveUrl(flyerImage?.url);
 }
+function UploadBox({
+  label,
+  multiple = false,
+  files = [],
+  onAdd,
+  onRemove,
+  warning,
+}) {
+  const inputRef = useRef(null);
+
+  const handleChange = (e) => {
+    const newFiles = Array.from(e.target.files || []);
+    if (newFiles.length > 0) onAdd(newFiles);
+    e.target.value = ""; // reset so same file can be re-selected
+  };
+
+  return (
+    <div>
+      <div
+        onClick={() => inputRef.current?.click()}
+        className="border border-dashed border-green-200 rounded-2xl bg-white text-center py-9 px-5 cursor-pointer text-gray-500 text-sm hover:border-green-400 transition-colors"
+      >
+        <Upload className="w-5 h-5 mx-auto mb-2 text-gray-400" />
+        {label}
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png"
+          multiple={multiple}
+          className="hidden"
+          onChange={handleChange}
+        />
+      </div>
+
+      {/* Warning */}
+      {warning && (
+        <div className="flex items-start gap-1.5 mt-1.5 text-amber-600 text-[11.5px]">
+          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-px" />
+          {warning}
+        </div>
+      )}
+
+      {/* File chips */}
+      {files.length > 0 && (
+        <div className="flex flex-wrap gap-2 mt-2">
+          {files.map((f, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-lg px-2.5 py-1 text-[11.5px] text-green-800"
+            >
+              <span className="max-w-[130px] truncate">{f.name}</span>
+              <button
+                type="button"
+                onClick={() => onRemove(i)}
+                className="text-green-500 hover:text-red-500 transition-colors"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function getCommunityName(business) {
   if (!business) return "";
@@ -36,8 +112,16 @@ function getCategoryNames(categories) {
 
 function getPlanLabel(business) {
   if (!business?.plan) return "—";
-  const price = business.final_price ?? business.plan.final_price ?? business.plan.base_price;
+  const price =
+    business.final_price ??
+    business.plan.final_price ??
+    business.plan.base_price;
   return `${business.plan.tier}${price ? ` · $${price}` : ""}`;
+}
+
+function getUploadedMediaId(response) {
+  if (Array.isArray(response)) return response[0]?.id ?? null;
+  return response?.id ?? null;
 }
 
 const STATUS_OPTIONS = ["PENDING", "APPROVED", "REJECTED", "SUSPENDED"];
@@ -47,9 +131,9 @@ const STATUS_OPTIONS = ["PENDING", "APPROVED", "REJECTED", "SUSPENDED"];
 function StatusPill({ status }) {
   const map = {
     APPROVED: "bg-emerald-50 text-emerald-700",
-    PENDING:  "bg-amber-50  text-amber-700",
+    PENDING: "bg-amber-50  text-amber-700",
     REJECTED: "bg-red-50    text-red-600",
-    SUSPENDED:"bg-stone-100 text-stone-500",
+    SUSPENDED: "bg-stone-100 text-stone-500",
   };
   return (
     <span
@@ -80,7 +164,10 @@ function Dropdown({ value, options, onChange }) {
           {options.map((o) => (
             <button
               key={o}
-              onClick={() => { onChange(o); setOpen(false); }}
+              onClick={() => {
+                onChange(o);
+                setOpen(false);
+              }}
               className="w-full text-left px-3 py-2 text-sm text-stone-600 hover:bg-stone-50 transition-colors"
             >
               {o}
@@ -104,12 +191,17 @@ function ConfirmDelete({ business, onConfirm, onCancel, isLoading }) {
             <AlertCircle size={20} className="text-red-500" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-stone-900">Delete Business</h2>
-            <p className="text-xs text-stone-500 mt-0.5">This action cannot be undone.</p>
+            <h2 className="text-sm font-bold text-stone-900">
+              Delete Business
+            </h2>
+            <p className="text-xs text-stone-500 mt-0.5">
+              This action cannot be undone.
+            </p>
           </div>
         </div>
         <p className="text-sm text-stone-600">
-          Are you sure you want to delete <span className="font-semibold">{business.name}</span>?
+          Are you sure you want to delete{" "}
+          <span className="font-semibold">{business.name}</span>?
         </p>
         <div className="flex gap-3">
           <button
@@ -136,21 +228,21 @@ function ConfirmDelete({ business, onConfirm, onCancel, isLoading }) {
 
 const FIELD_INPUT = (label, key, type = "text") => ({ label, key, type });
 const FIELDS_LEFT = [
-  FIELD_INPUT("Business Name",    "name"),
-  FIELD_INPUT("Description",      "description"),
+  FIELD_INPUT("Business Name", "name"),
+  FIELD_INPUT("Description", "description"),
   FIELD_INPUT("Business Address", "business_address"),
-  FIELD_INPUT("Business Phone",   "business_phone"),
-  FIELD_INPUT("Business Hours",   "business_hours"),
+  FIELD_INPUT("Business Phone", "business_phone"),
+  FIELD_INPUT("Business Hours", "business_hours"),
 ];
 const FIELDS_RIGHT = [
-  FIELD_INPUT("Contact Name",  "contact_name"),
+  FIELD_INPUT("Contact Name", "contact_name"),
   FIELD_INPUT("Contact Email", "contact_email", "email"),
   FIELD_INPUT("Contact Phone", "contact_phone"),
-  FIELD_INPUT("Instagram",     "instagram"),
-  FIELD_INPUT("Facebook",      "facebook"),
-  FIELD_INPUT("Other Social",  "other_social_link"),
-  FIELD_INPUT("Website",       "website", "url"),
-  FIELD_INPUT("Promo Video",   "promo_video_link", "url"),
+  FIELD_INPUT("Instagram", "instagram"),
+  FIELD_INPUT("Facebook", "facebook"),
+  FIELD_INPUT("Other Social", "other_social_link"),
+  FIELD_INPUT("Website", "website", "url"),
+  FIELD_INPUT("Promo Video", "promo_video_link", "url"),
   FIELD_INPUT("Serving Areas", "serving_areas"),
   FIELD_INPUT("Services Tags", "services_tags"),
 ];
@@ -170,7 +262,9 @@ function Field({ label, value, onChange, type = "text" }) {
 }
 
 function CityField({ value, onChange, communities, isLoading }) {
-  const hasSelectedCity = communities.some((community) => community.name === value);
+  const hasSelectedCity = communities.some(
+    (community) => community.name === value,
+  );
 
   return (
     <div className="space-y-1.5">
@@ -181,7 +275,9 @@ function CityField({ value, onChange, communities, isLoading }) {
         disabled={isLoading}
         className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition disabled:cursor-not-allowed disabled:bg-stone-50 disabled:text-stone-400"
       >
-        <option value="">{isLoading ? "Loading cities..." : "Select a city"}</option>
+        <option value="">
+          {isLoading ? "Loading cities..." : "Select a city"}
+        </option>
         {value && !hasSelectedCity && <option value={value}>{value}</option>}
         {communities.map((community) => (
           <option key={community.id} value={community.name}>
@@ -195,7 +291,12 @@ function CityField({ value, onChange, communities, isLoading }) {
 
 function EditModal({ business, onClose, onSave, isSaving }) {
   const [form, setForm] = useState({});
-  const { data: communities = [], isLoading: communitiesLoading } = useGetCommunitiesQuery();
+  const [flyerFiles, setFlyerFiles] = useState([]);
+  const [flyerUploadError, setFlyerUploadError] = useState("");
+  const { data: communities = [], isLoading: communitiesLoading } =
+    useGetCommunitiesQuery();
+  const [uploadMedia, { isLoading: isUploadingFlyer }] =
+    useUploadMediaMutation();
   const {
     data: businessDetails,
     isLoading: detailsLoading,
@@ -207,43 +308,67 @@ function EditModal({ business, onClose, onSave, isSaving }) {
 
   useEffect(() => {
     if (activeBusiness) {
+      setFlyerFiles([]);
+      setFlyerUploadError("");
       setForm({
-        name:               activeBusiness.name ?? "",
-        description:        activeBusiness.description ?? "",
-        status:             activeBusiness.status ?? "PENDING",
-        is_featured:        activeBusiness.is_featured ?? false,
-        contact_email:      activeBusiness.contact_email ?? "",
-        contact_name:       activeBusiness.contact_name ?? "",
-        contact_phone:      activeBusiness.contact_phone ?? "",
-        city:               getCommunityName(activeBusiness),
-        business_address:   activeBusiness.business_address ?? "",
-        business_phone:     activeBusiness.business_phone ?? "",
-        business_hours:     activeBusiness.business_hours ?? "",
-        instagram:          activeBusiness.instagram ?? "",
-        facebook:           activeBusiness.facebook ?? "",
-        other_social_link:  activeBusiness.other_social_link ?? "",
-        serving_areas:      activeBusiness.serving_areas ?? "",
-        services_tags:      activeBusiness.services_tags ?? "",
-        website:            activeBusiness.website ?? "",
-        promo_video_link:   activeBusiness.promo_video_link ?? "",
+        name: activeBusiness.name ?? "",
+        description: activeBusiness.description ?? "",
+        status: activeBusiness.status ?? "PENDING",
+        is_featured: activeBusiness.is_featured ?? false,
+        contact_email: activeBusiness.contact_email ?? "",
+        contact_name: activeBusiness.contact_name ?? "",
+        contact_phone: activeBusiness.contact_phone ?? "",
+        city: getCommunityName(activeBusiness),
+        business_address: activeBusiness.business_address ?? "",
+        business_phone: activeBusiness.business_phone ?? "",
+        business_hours: activeBusiness.business_hours ?? "",
+        instagram: activeBusiness.instagram ?? "",
+        facebook: activeBusiness.facebook ?? "",
+        other_social_link: activeBusiness.other_social_link ?? "",
+        serving_areas: activeBusiness.serving_areas ?? "",
+        services_tags: activeBusiness.services_tags ?? "",
+        website: activeBusiness.website ?? "",
+        promo_video_link: activeBusiness.promo_video_link ?? "",
       });
     }
   }, [activeBusiness]);
 
   if (!business) return null;
 
-  const update = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+  const update = (key) => (e) =>
+    setForm((f) => ({ ...f, [key]: e.target.value }));
 
   const flyerUrl = getFlyerUrl(activeBusiness.flyer_image);
   const categories = business.categories?.map((c) => c.name).join(", ") || "—";
-  const planLabel  = business.plan
+  const planLabel = business.plan
     ? `${business.plan.tier} · $${business.plan.final_price}`
     : "—";
 
   const detailCategories = getCategoryNames(activeBusiness.categories);
   const detailPlanLabel = getPlanLabel(activeBusiness);
 
-  const handleSubmit = () => onSave({ id: activeBusiness.id, ...form });
+  const handleSubmit = async () => {
+    setFlyerUploadError("");
+    const payload = { id: activeBusiness.id, ...form };
+
+    try {
+      if (flyerFiles.length > 0) {
+        const formData = new FormData();
+        formData.append("image", flyerFiles[0]);
+        const uploadResponse = await uploadMedia(formData).unwrap();
+        const flyerImageId = getUploadedMediaId(uploadResponse);
+
+        if (flyerImageId) {
+          payload.flyer_image = flyerImageId;
+        }
+      }
+
+      await onSave(payload);
+    } catch (err) {
+      console.error("Failed to upload flyer:", err);
+      setFlyerUploadError("Failed to upload flyer. Please try again.");
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 backdrop-blur-[2px] p-4">
@@ -251,9 +376,14 @@ function EditModal({ business, onClose, onSave, isSaving }) {
         {/* Header */}
         <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-stone-100">
           <div>
-            <h2 className="text-base font-bold text-stone-900">Edit Business</h2>
+            <h2 className="text-base font-bold text-stone-900">
+              Edit Business
+            </h2>
             <p className="text-xs text-stone-500 mt-0.5">
-              ID #{activeBusiness.id} · {detailsLoading ? "Loading details..." : detailCategories || categories}
+              ID #{activeBusiness.id} ·{" "}
+              {detailsLoading
+                ? "Loading details..."
+                : detailCategories || categories}
             </p>
           </div>
           <button
@@ -273,34 +403,57 @@ function EditModal({ business, onClose, onSave, isSaving }) {
         <div className="px-6 py-5 space-y-6">
           {/* Top row: flyer + meta */}
           <div className="flex gap-5">
-            {flyerUrl ? (
-              <img
-                src={flyerUrl}
-                alt={activeBusiness.name}
-                className="h-28 w-28 rounded-xl object-cover shrink-0 border border-stone-100"
+            <div className="w-44 shrink-0 space-y-3">
+              {flyerUrl ? (
+                <img
+                  src={flyerUrl}
+                  alt={activeBusiness.name}
+                  className="h-28 w-full rounded-xl object-cover border border-stone-100"
+                />
+              ) : (
+                <div className="h-28 w-full rounded-xl bg-stone-100 flex items-center justify-center text-stone-300 text-xs">
+                  No image
+                </div>
+              )}
+              <UploadBox
+                label="Click to upload your flyer (JPG or PNG)"
+                files={flyerFiles}
+                onAdd={(newFiles) => {
+                  setFlyerUploadError("");
+                  setFlyerFiles(newFiles.slice(0, 1));
+                }}
+                onRemove={() => {
+                  setFlyerUploadError("");
+                  setFlyerFiles([]);
+                }}
               />
-            ) : (
-              <div className="h-28 w-28 rounded-xl bg-stone-100 shrink-0 flex items-center justify-center text-stone-300 text-xs">
-                No image
-              </div>
-            )}
+              {flyerUploadError && (
+                <p className="text-xs text-red-500">{flyerUploadError}</p>
+              )}
+            </div>
             <div className="flex-1 grid grid-cols-2 gap-4">
               {/* Status */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-stone-500">Status</label>
+                <label className="text-xs font-medium text-stone-500">
+                  Status
+                </label>
                 <select
                   value={form.status}
                   onChange={update("status")}
                   className="w-full rounded-lg border border-stone-200 px-3 py-2.5 text-sm text-stone-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 bg-white"
                 >
                   {STATUS_OPTIONS.map((s) => (
-                    <option key={s} value={s}>{s}</option>
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
                   ))}
                 </select>
               </div>
               {/* Plan (read-only) */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-stone-500">Plan</label>
+                <label className="text-xs font-medium text-stone-500">
+                  Plan
+                </label>
                 <input
                   readOnly
                   value={detailPlanLabel || planLabel}
@@ -309,7 +462,9 @@ function EditModal({ business, onClose, onSave, isSaving }) {
               </div>
               {/* User (read-only) */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-stone-500">Owner</label>
+                <label className="text-xs font-medium text-stone-500">
+                  Owner
+                </label>
                 <input
                   readOnly
                   value={business.user?.email ?? "—"}
@@ -322,10 +477,14 @@ function EditModal({ business, onClose, onSave, isSaving }) {
                   <input
                     type="checkbox"
                     checked={form.is_featured}
-                    onChange={(e) => setForm((f) => ({ ...f, is_featured: e.target.checked }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, is_featured: e.target.checked }))
+                    }
                     className="accent-emerald-700 w-4 h-4"
                   />
-                  <span className="text-sm font-medium text-stone-700">Featured</span>
+                  <span className="text-sm font-medium text-stone-700">
+                    Featured
+                  </span>
                 </label>
               </div>
             </div>
@@ -334,7 +493,13 @@ function EditModal({ business, onClose, onSave, isSaving }) {
           {/* Two-column field grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {FIELDS_LEFT.slice(0, 2).map(({ label, key, type }) => (
-              <Field key={key} label={label} value={form[key]} onChange={update(key)} type={type} />
+              <Field
+                key={key}
+                label={label}
+                value={form[key]}
+                onChange={update(key)}
+                type={type}
+              />
             ))}
             <CityField
               value={form.city}
@@ -343,10 +508,22 @@ function EditModal({ business, onClose, onSave, isSaving }) {
               isLoading={communitiesLoading}
             />
             {FIELDS_LEFT.slice(2).map(({ label, key, type }) => (
-              <Field key={key} label={label} value={form[key]} onChange={update(key)} type={type} />
+              <Field
+                key={key}
+                label={label}
+                value={form[key]}
+                onChange={update(key)}
+                type={type}
+              />
             ))}
             {FIELDS_RIGHT.map(({ label, key, type }) => (
-              <Field key={key} label={label} value={form[key]} onChange={update(key)} type={type} />
+              <Field
+                key={key}
+                label={label}
+                value={form[key]}
+                onChange={update(key)}
+                type={type}
+              />
             ))}
           </div>
         </div>
@@ -361,10 +538,12 @@ function EditModal({ business, onClose, onSave, isSaving }) {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={isSaving}
+            disabled={isSaving || isUploadingFlyer}
             className="flex-1 rounded-lg bg-emerald-800 py-2.5 text-sm font-medium text-white hover:bg-emerald-900 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
           >
-            {isSaving && <Loader2 size={14} className="animate-spin" />}
+            {(isSaving || isUploadingFlyer) && (
+              <Loader2 size={14} className="animate-spin" />
+            )}
             Save Changes
           </button>
         </div>
@@ -384,22 +563,29 @@ function EditModal({ business, onClose, onSave, isSaving }) {
 /* ─── Main Component ─── */
 
 export default function AllBusinessListing() {
-  const [tab,       setTab]       = useState("All");
-  const [search,    setSearch]    = useState("");
+  const [tab, setTab] = useState("All");
+  const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All Status");
-  const [editing,   setEditing]   = useState(null);
-  const [deleting,  setDeleting]  = useState(null);
+  const [editing, setEditing] = useState(null);
+  const [deleting, setDeleting] = useState(null);
 
-  const { data: businesses = [], isLoading, isError } = useGetBusinessesListQuery();
-  const [updateBusiness, { isLoading: isSaving }]   = useUpdateBusinessMutation();
-  const [deleteBusiness, { isLoading: isDeleting }] = useDeleteBusinessMutation();
+  const {
+    data: businesses = [],
+    isLoading,
+    isError,
+  } = useGetBusinessesListQuery();
+  const [updateBusiness, { isLoading: isSaving }] = useUpdateBusinessMutation();
+  const [deleteBusiness, { isLoading: isDeleting }] =
+    useDeleteBusinessMutation();
 
   const statuses = ["All Status", ...STATUS_OPTIONS];
 
   const filtered = businesses.filter((b) => {
     if (tab === "Featured" && !b.is_featured) return false;
-    if (statusFilter !== "All Status" && b.status !== statusFilter) return false;
-    if (search && !b.name.toLowerCase().includes(search.toLowerCase())) return false;
+    if (statusFilter !== "All Status" && b.status !== statusFilter)
+      return false;
+    if (search && !b.name.toLowerCase().includes(search.toLowerCase()))
+      return false;
     return true;
   });
 
@@ -422,9 +608,11 @@ export default function AllBusinessListing() {
   };
 
   return (
-    <div className="bg-[#F4F1EA] p-6 sm:p-10">
+    <div className="bg-[#F4F1EA] min-h-screen p-6 sm:p-10">
       <div className="mx-auto max-w-6xl">
-        <h1 className="text-xl font-bold text-stone-900 mb-4">All Business Listing</h1>
+        <h1 className="text-xl font-bold text-stone-900 mb-4">
+          All Business Listing
+        </h1>
 
         <div className="rounded-2xl bg-white border border-stone-100 shadow-sm overflow-hidden">
           {/* Tabs */}
@@ -447,7 +635,10 @@ export default function AllBusinessListing() {
           {/* Filters */}
           <div className="px-6 py-4 flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+              <Search
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400"
+              />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -455,7 +646,11 @@ export default function AllBusinessListing() {
                 className="w-full rounded-lg border border-stone-200 pl-9 pr-3 py-2.5 text-sm text-stone-700 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
               />
             </div>
-            <Dropdown value={statusFilter} options={statuses} onChange={setStatusFilter} />
+            <Dropdown
+              value={statusFilter}
+              options={statuses}
+              onChange={setStatusFilter}
+            />
           </div>
 
           {/* Table */}
@@ -483,19 +678,27 @@ export default function AllBusinessListing() {
               </thead>
               <tbody>
                 {filtered.map((b, i) => {
-                  const imgUrl     = getFlyerUrl(b.flyer_image);
-                  const catNames   = getCategoryNames(b.categories);
-                  const planLabel  = b.plan?.tier ?? "—";
+                  const imgUrl = getFlyerUrl(b.flyer_image);
+                  const catNames = getCategoryNames(b.categories);
+                  const planLabel = b.plan?.tier ?? "—";
 
                   return (
                     <tr
                       key={b.id}
-                      className={i !== filtered.length - 1 ? "border-b border-stone-100" : ""}
+                      className={
+                        i !== filtered.length - 1
+                          ? "border-b border-stone-100"
+                          : ""
+                      }
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           {imgUrl ? (
-                            <img src={imgUrl} alt={b.name} className="h-9 w-9 rounded-lg object-cover shrink-0" />
+                            <img
+                              src={imgUrl}
+                              alt={b.name}
+                              className="h-9 w-9 rounded-lg object-cover shrink-0"
+                            />
                           ) : (
                             <div className="h-9 w-9 rounded-lg bg-stone-100 shrink-0" />
                           )}
@@ -508,13 +711,21 @@ export default function AllBusinessListing() {
                                 </span>
                               )}
                             </p>
-                            <p className="text-xs text-stone-400">{b.contact_email}</p>
+                            <p className="text-xs text-stone-400">
+                              {b.contact_email}
+                            </p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-stone-500 max-w-[180px] truncate">{catNames}</td>
-                      <td className="px-6 py-4 text-stone-500">{getCommunityName(b) || "—"}</td>
-                      <td className="px-6 py-4 text-stone-500 capitalize">{planLabel}</td>
+                      <td className="px-6 py-4 text-stone-500 max-w-[180px] truncate">
+                        {catNames}
+                      </td>
+                      <td className="px-6 py-4 text-stone-500">
+                        {getCommunityName(b) || "—"}
+                      </td>
+                      <td className="px-6 py-4 text-stone-500 capitalize">
+                        {planLabel}
+                      </td>
                       <td className="px-6 py-4">
                         <StatusPill status={b.status} />
                       </td>
@@ -541,7 +752,10 @@ export default function AllBusinessListing() {
                 })}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-6 py-10 text-center text-stone-400">
+                    <td
+                      colSpan={6}
+                      className="px-6 py-10 text-center text-stone-400"
+                    >
                       No businesses match your filters.
                     </td>
                   </tr>

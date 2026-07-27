@@ -15,24 +15,33 @@ function mediaUrl(path) {
   return `${BASE_URL}${path}`;
 }
 
+function StatusBadge({ status }) {
+  const styles = {
+    APPROVED: "bg-emerald-50 text-emerald-700 border-emerald-100",
+    PENDING: "bg-amber-50 text-amber-700 border-amber-100",
+    REJECTED: "bg-red-50 text-red-600 border-red-100",
+    SUSPENDED: "bg-stone-100 text-stone-500 border-stone-200",
+  };
+
+  return (
+    <span
+      className={`absolute left-4 top-4 z-10 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase shadow-sm ${
+        styles[status] ?? "bg-stone-100 text-stone-500 border-stone-200"
+      }`}
+    >
+      {status || "UNKNOWN"}
+    </span>
+  );
+}
+
 /* Card */
 function ListingCard({ business, onReview }) {
-  const [approveBusiness, { isLoading: approving }] = useApproveBusinessMutation();
   const [rejectBusiness, { isLoading: rejecting }] = useRejectBusinessMutation();
 
   const imgSrc = mediaUrl(business.flyer_image?.url);
   const category = business.categories?.[0]?.name ?? "—";
   const tier = business.plan?.tier ?? "—";
   const monthlyPrice = business.plan?.monthly_price ?? business.plan?.final_price ?? 0;
-
-  const handleApprove = async () => {
-    try {
-      await approveBusiness(business.id).unwrap();
-      toast.success(`${business.name} approved!`);
-    } catch {
-      toast.error("Failed to approve business.");
-    }
-  };
 
   const handleReject = async () => {
     try {
@@ -45,13 +54,16 @@ function ListingCard({ business, onReview }) {
 
   return (
     <div className="rounded-2xl bg-white border border-stone-100 shadow-sm overflow-hidden flex flex-col">
-      {imgSrc ? (
-        <img src={imgSrc} alt={business.name} className="h-40 p-4 w-full object-contain" />
-      ) : (
-        <div className="h-40 w-full bg-stone-100 p-4 flex items-center justify-center">
-          <span className="text-stone-400 text-xs">No image</span>
-        </div>
-      )}
+      <div className="relative">
+        <StatusBadge status={business.status} />
+        {imgSrc ? (
+          <img src={imgSrc} alt={business.name} className="h-40 p-4 w-full object-contain" />
+        ) : (
+          <div className="h-40 w-full bg-stone-100 p-4 flex items-center justify-center">
+            <span className="text-stone-400 text-xs">No image</span>
+          </div>
+        )}
+      </div>
       <div className="p-4 flex flex-col flex-1">
         <h3 className="text-sm font-semibold text-stone-900">{business.name}</h3>
         <p className="text-xs text-stone-500 mt-1 capitalize">{tier} Plan</p>
@@ -78,14 +90,14 @@ function ListingCard({ business, onReview }) {
         <div className="flex gap-2 mt-4 pt-1">
           <button
             onClick={handleReject}
-            disabled={rejecting || approving}
+            disabled={rejecting}
             className="flex-1 rounded-lg border border-stone-200 py-2 text-xs font-medium text-stone-600 hover:bg-stone-50 transition-colors disabled:opacity-60"
           >
             {rejecting ? "Rejecting..." : "Reject"}
           </button>
           <button
             onClick={() => onReview(business)}
-            disabled={approving || rejecting}
+            disabled={rejecting}
             className="flex-1 rounded-lg bg-emerald-800 py-2 text-xs font-medium text-white hover:bg-emerald-900 transition-colors disabled:opacity-60"
           >
             Review
@@ -99,9 +111,9 @@ function ListingCard({ business, onReview }) {
 /* Field helper */
 function Field({ label, value, highlight }) {
   return (
-    <div>
+    <div className="min-w-0">
       <p className="text-[11px] text-stone-400">{label}</p>
-      <p className={`text-sm break-words ${highlight ? "font-semibold text-emerald-700" : "text-stone-800"}`}>
+      <p className={`text-sm break-words leading-relaxed ${highlight ? "font-semibold text-emerald-700" : "text-stone-800"}`}>
         {value || "—"}
       </p>
     </div>
@@ -145,7 +157,7 @@ function ReviewModal({ open, onClose, business }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 backdrop-blur-[2px] p-4">
-      <div className="w-full max-w-xl rounded-2xl bg-white shadow-xl max-h-[90vh] overflow-y-auto">
+      <div className="w-full max-w-4xl rounded-2xl bg-white shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-stone-100">
           <h2 className="text-base font-bold text-stone-900">Review New Listing Request</h2>
           <button
@@ -173,10 +185,9 @@ function ReviewModal({ open, onClose, business }) {
 
           <div>
             <h3 className="text-sm font-semibold text-stone-900 mb-3">Submitted Data</h3>
-            <div className="flex gap-5">
-              <div className="flex-1 grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-5 items-start">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0">
                 <Field label="Business Name" value={business.name} />
-                <div />
                 <Field label="Category" value={categoryNames} />
                 <div>
                   <p className="text-[11px] text-stone-400 capitalize">{tier} Plan</p>
@@ -190,17 +201,19 @@ function ReviewModal({ open, onClose, business }) {
                 <Field label="Other social link" value={business.other_social_link} />
                 <Field label="Website" value={business.website} />
               </div>
-              {imgSrc ? (
-                <img
-                  src={imgSrc}
-                  alt={business.name}
-                  className="rounded-xl object-contain shrink-0"
-                />
-              ) : (
-                <div className="w-40 h-28 rounded-xl bg-stone-100 shrink-0 flex items-center justify-center">
-                  <span className="text-stone-400 text-xs">No image</span>
-                </div>
-              )}
+              <div className="w-full overflow-hidden rounded-xl border border-stone-100 bg-stone-50">
+                {imgSrc ? (
+                  <img
+                    src={imgSrc}
+                    alt={business.name}
+                    className="h-56 w-full object-contain"
+                  />
+                ) : (
+                  <div className="h-56 w-full flex items-center justify-center">
+                    <span className="text-stone-400 text-xs">No image</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
