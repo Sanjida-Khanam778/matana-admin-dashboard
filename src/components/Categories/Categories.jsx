@@ -16,15 +16,6 @@ function mediaUrl(path) {
   return `${BASE_URL}${path}`;
 }
 
-const occasions = [
-  "Purim",
-  "Hanukkah",
-  "Wedding",
-  "Bar Mitzvah",
-  "Rosh Hashanah",
-  "Shabbat",
-];
-
 function AddCategoryModal({ open, onClose }) {
   const [name, setName] = useState("");
   const [selected, setSelected] = useState(["Purim"]);

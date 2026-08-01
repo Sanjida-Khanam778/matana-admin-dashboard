@@ -1,11 +1,24 @@
-import { useState, useRef } from "react";
-import { Plus, MoreHorizontal, Trash2, X, UploadCloud, Loader2, AlertCircle } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import {
+  Plus,
+  MoreHorizontal,
+  Trash2,
+  X,
+  UploadCloud,
+  Loader2,
+  AlertCircle,
+  MapPin,
+  Check,
+  Search,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import {
   useGetCommunitiesQuery,
   useCreateCommunityMutation,
   useDeleteCommunityMutation,
   useUploadMediaMutation,
+  useGetMapCommunitiesQuery,
+  useUpdateMapCommunitiesMutation,
 } from "../../Api/dashboardApi";
 
 const BASE_URL = "http://10.10.29.168:8005";
@@ -14,6 +27,188 @@ function mediaUrl(path) {
   if (!path) return null;
   if (path.startsWith("http")) return path;
   return `${BASE_URL}${path}`;
+}
+
+function SelectMapCommunitiesModal({ open, onClose }) {
+  const { data: allCommunities = [], isLoading: isLoadingAll } = useGetCommunitiesQuery();
+  const { data: mapCommunities = [], isLoading: isLoadingMap } = useGetMapCommunitiesQuery(
+    undefined,
+    { skip: !open }
+  );
+  const [updateMapCommunities, { isLoading: isSaving }] = useUpdateMapCommunitiesMutation();
+
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    if (open && mapCommunities) {
+      const initialIds = Array.isArray(mapCommunities)
+        ? mapCommunities.map((item) => item.id)
+        : [];
+      setSelectedIds(initialIds);
+    }
+  }, [open, mapCommunities]);
+
+  if (!open) return null;
+
+  const handleToggle = (id) => {
+    if (selectedIds.includes(id)) {
+      setSelectedIds(selectedIds.filter((item) => item !== id));
+    } else {
+      if (selectedIds.length >= 7) {
+        toast.error("You can select a maximum of 7 communities for the hero map.");
+        return;
+      }
+      setSelectedIds([...selectedIds, id]);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      const res = await updateMapCommunities({ community_ids: selectedIds }).unwrap();
+      toast.success(res?.message || "Map communities updated successfully.");
+      onClose();
+    } catch (err) {
+      toast.error(err?.data?.detail || err?.data?.message || "Failed to update map communities.");
+      console.error(err);
+    }
+  };
+
+  const filteredCommunities = allCommunities.filter(
+    (comm) =>
+      comm.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (comm.state && comm.state.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 backdrop-blur-[2px] p-4">
+      <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl flex flex-col max-h-[85vh]">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-stone-100">
+          <div>
+            <h2 className="text-[16px] font-semibold text-stone-900 flex items-center gap-2">
+              <MapPin size={18} className="text-emerald-700" />
+              Hero Section Map Communities
+            </h2>
+            <p className="text-xs text-stone-500 mt-0.5">
+              Select which communities will appear on the hero section map (Max 7)
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-full p-1 text-stone-400 hover:bg-stone-100 hover:text-stone-600 transition-colors"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-6 flex-1 overflow-y-auto space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={15} />
+              <input
+                type="text"
+                placeholder="Search community..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-lg border border-stone-200 pl-9 pr-3 py-2 text-xs text-stone-800 placeholder:text-stone-400 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+              />
+            </div>
+            <div className="shrink-0 rounded-lg bg-emerald-50 border border-emerald-100 px-3 py-2 text-xs font-semibold text-emerald-800">
+              {selectedIds.length} / 7 Selected
+            </div>
+          </div>
+
+          {isLoadingAll || isLoadingMap ? (
+            <div className="flex items-center justify-center py-12 gap-2 text-stone-400">
+              <Loader2 className="animate-spin" size={18} />
+              <span className="text-xs">Loading map communities...</span>
+            </div>
+          ) : filteredCommunities.length === 0 ? (
+            <p className="text-xs text-stone-400 py-8 text-center">
+              No matching communities found.
+            </p>
+          ) : (
+            <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1">
+              {filteredCommunities.map((comm) => {
+                const isSelected = selectedIds.includes(comm.id);
+                const imgSrc = mediaUrl(comm.image);
+                return (
+                  <div
+                    key={comm.id}
+                    onClick={() => handleToggle(comm.id)}
+                    className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer select-none ${
+                      isSelected
+                        ? "border-emerald-700 bg-emerald-50/50 shadow-sm"
+                        : "border-stone-200 hover:border-stone-300 bg-white"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      {imgSrc ? (
+                        <img
+                          src={imgSrc}
+                          alt={comm.name}
+                          className="h-10 w-10 rounded-lg object-cover shrink-0"
+                        />
+                      ) : (
+                        <div className="h-10 w-10 rounded-lg bg-stone-100 flex items-center justify-center shrink-0">
+                          <span className="text-stone-400 text-[10px]">No img</span>
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-stone-900 truncate">
+                          {comm.name}
+                          {comm.state ? `, ${comm.state}` : ""}
+                        </p>
+                        <p className="text-[11px] text-stone-400">
+                          {comm.business_count ?? 0} listings · {comm.featured_count ?? 0} featured
+                        </p>
+                      </div>
+                    </div>
+
+                    <div
+                      className={`h-5 w-5 rounded-md border flex items-center justify-center transition-colors shrink-0 ${
+                        isSelected
+                          ? "bg-emerald-800 border-emerald-800 text-white"
+                          : "border-stone-300 bg-white"
+                      }`}
+                    >
+                      {isSelected && <Check size={13} strokeWidth={3} />}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex gap-3 px-6 py-4 border-t border-stone-100 bg-stone-50/50 rounded-b-2xl">
+          <button
+            onClick={onClose}
+            className="flex-1 rounded-lg border border-stone-200 py-2.5 text-sm font-medium text-stone-600 hover:bg-stone-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="flex-1 rounded-lg bg-emerald-800 py-2.5 text-sm font-medium text-white hover:bg-emerald-900 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+          >
+            {isSaving ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              "Save Changes"
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function AddCommunityModal({ open, onClose }) {
@@ -229,6 +424,7 @@ function CommunityCard({ comm, openMenu, onToggleMenu, onRemove }) {
 export default function Communities() {
   const [openMenu, setOpenMenu] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [mapModalOpen, setMapModalOpen] = useState(false);
 
   const { data: list = [], isLoading, isError, error } = useGetCommunitiesQuery();
   const [deleteCommunity] = useDeleteCommunityMutation();
@@ -261,13 +457,22 @@ export default function Communities() {
               Local cities and neighborhoods
             </p>
           </div>
-          <button
-            onClick={() => setModalOpen(true)}
-            className="inline-flex items-center gap-2 rounded-full bg-emerald-800 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-900 transition-colors"
-          >
-            <Plus size={16} />
-            Add community
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMapModalOpen(true)}
+              className="inline-flex items-center gap-2 rounded-full border border-emerald-700 bg-emerald-50/70 px-4 py-2.5 text-sm font-medium text-emerald-800 shadow-sm hover:bg-emerald-100/80 transition-colors"
+            >
+              <MapPin size={16} />
+              Map Communities
+            </button>
+            <button
+              onClick={() => setModalOpen(true)}
+              className="inline-flex items-center gap-2 rounded-full bg-emerald-800 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-900 transition-colors"
+            >
+              <Plus size={16} />
+              Add community
+            </button>
+          </div>
         </div>
 
         {isLoading && (
@@ -306,6 +511,10 @@ export default function Communities() {
         )}
       </div>
       <AddCommunityModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <SelectMapCommunitiesModal
+        open={mapModalOpen}
+        onClose={() => setMapModalOpen(false)}
+      />
     </div>
   );
 }

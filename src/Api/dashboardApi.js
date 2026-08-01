@@ -472,6 +472,24 @@ export const authApi = api.injectEndpoints({
       }),
       invalidatesTags: ["community"],
     }),
+
+    // Hero Section Map Communities
+    getMapCommunities: builder.query({
+      query: () => ({
+        url: "add-communities/to/map/",
+        method: "GET",
+      }),
+      providesTags: ["map-community"],
+    }),
+
+    updateMapCommunities: builder.mutation({
+      query: (body) => ({
+        url: "add-communities/to/map/",
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: ["map-community"],
+    }),
   }),
 });
 
@@ -529,4 +547,6 @@ export const {
   useGetCommunitiesQuery,
   useCreateCommunityMutation,
   useDeleteCommunityMutation,
+  useGetMapCommunitiesQuery,
+  useUpdateMapCommunitiesMutation,
 } = authApi;

@@ -26,6 +26,7 @@ export const api = createApi({
     "business",
     "category",
     "community",
+    "map-community",
     "messages",
   ],
   endpoints: () => ({}),
