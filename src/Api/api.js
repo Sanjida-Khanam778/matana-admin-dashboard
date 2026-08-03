@@ -27,6 +27,7 @@ export const api = createApi({
     "category",
     "community",
     "map-community",
+    "profile",
     "messages",
   ],
   endpoints: () => ({}),

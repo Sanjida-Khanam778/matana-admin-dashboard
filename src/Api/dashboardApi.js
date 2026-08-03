@@ -10,6 +10,14 @@ export const authApi = api.injectEndpoints({
       providesTags: ["stats"],
     }),
 
+    getOverviewSummary: builder.query({
+      query: () => ({
+        url: "summary/",
+        method: "GET",
+      }),
+      providesTags: ["stats"],
+    }),
+
     getMonthlyRevenueStats: builder.query({
       query: () => ({
         url: "adminapi/revenue-Monthly-stats/",
@@ -281,9 +289,26 @@ export const authApi = api.injectEndpoints({
     }),
 
     // Admin profile endpoints
+    getProfile: builder.query({
+      query: () => ({
+        url: "auth/profile/",
+        method: "GET",
+      }),
+      providesTags: ["profile"],
+    }),
+
+    updateProfile: builder.mutation({
+      query: (payload) => ({
+        url: "auth/profile/",
+        method: "PATCH",
+        body: payload,
+      }),
+      invalidatesTags: ["profile"],
+    }),
+
     getPlatformAdminProfile: builder.query({
       query: () => ({
-        url: "platform/admin/profile/",
+        url: "auth/profile/",
         method: "GET",
       }),
       providesTags: ["profile"],
@@ -291,7 +316,7 @@ export const authApi = api.injectEndpoints({
 
     updatePlatformAdminProfile: builder.mutation({
       query: (payload) => ({
-        url: "platform/admin/profile/",
+        url: "auth/profile/",
         method: "PATCH",
         body: payload,
       }),
@@ -533,6 +558,8 @@ export const {
   useUpdatePlatformAdminPasswordMutation,
   useGetPlatformAdminProfileQuery,
   useUpdatePlatformAdminProfileMutation,
+  useGetProfileQuery,
+  useUpdateProfileMutation,
   useGetCommisionRateQuery,
   useGetBusinessesListQuery,
   useGetBusinessByIdQuery,
@@ -549,4 +576,5 @@ export const {
   useDeleteCommunityMutation,
   useGetMapCommunitiesQuery,
   useUpdateMapCommunitiesMutation,
+  useGetOverviewSummaryQuery,
 } = authApi;

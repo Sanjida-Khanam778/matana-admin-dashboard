@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Upload, Check, AlertTriangle, X } from "lucide-react";
+import { Check } from "lucide-react";
 import price1 from "../../assets/icons/price1.png";
 import price2 from "../../assets/icons/price2.png";
 import price3 from "../../assets/icons/price3.png";
@@ -9,7 +9,12 @@ import {
   useUploadMediaMutation,
   useRegisterBusinessMutation,
   useGetCommunitiesQuery,
+  useGetOrderSummaryQuery,
 } from "../../Api/businessDirectoryApi";
+
+import PlanSelection from "./PlanSelection";
+import PaymentSection from "./PaymentSection";
+import BusinessDetailsFields from "./BusinessDetailsFields";
 
 // ── Plan UI metadata (icons, features, limits) ────────────────────────────
 const PLAN_META = {
@@ -24,8 +29,8 @@ const PLAN_META = {
       "Contact Information and Social Media Platforms",
       "Business Directory (up to 5 lines)",
     ],
-    maxPhotos: 0,       // no gallery
-    maxDescChars: 250,  // ~5 lines
+    maxPhotos: 0,
+    maxDescChars: 250,
   },
   featured: {
     name: "Featured Partner",
@@ -40,7 +45,7 @@ const PLAN_META = {
       "Business Description (up to 7 lines)",
     ],
     maxPhotos: 5,
-    maxDescChars: 350,  // ~7 lines
+    maxDescChars: 350,
   },
   premium: {
     name: "Premium Partner",
@@ -57,97 +62,25 @@ const PLAN_META = {
       "Business Description (up to 10 lines)",
     ],
     maxPhotos: 10,
-    maxDescChars: 500,  // ~10 lines
+    maxDescChars: 500,
   },
 };
 
-const PAYMENT_TYPES = [
-  { value: "recurring", label: "Monthly Recurring" },
-  { value: "one_time", label: "One-Time Payment" },
-];
-
-const DURATION_OPTIONS = [
-  { value: 3, label: "3 Months" },
-  { value: 6, label: "6 Months" },
-  { value: 12, label: "12 Months" },
-];
-
-// ── Functional Upload Box ─────────────────────────────────────────────────
-function UploadBox({ label, multiple = false, files = [], onAdd, onRemove, warning }) {
-  const inputRef = useRef(null);
-
-  const handleChange = (e) => {
-    const newFiles = Array.from(e.target.files || []);
-    if (newFiles.length > 0) onAdd(newFiles);
-    e.target.value = ""; // reset so same file can be re-selected
-  };
-
-  return (
-    <div>
-      <div
-        onClick={() => inputRef.current?.click()}
-        className="border border-dashed border-green-200 rounded-2xl bg-white text-center py-9 px-5 cursor-pointer text-gray-500 text-sm hover:border-green-400 transition-colors"
-      >
-        <Upload className="w-5 h-5 mx-auto mb-2 text-gray-400" />
-        {label}
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/jpeg,image/png"
-          multiple={multiple}
-          className="hidden"
-          onChange={handleChange}
-        />
-      </div>
-
-      {/* Warning */}
-      {warning && (
-        <div className="flex items-start gap-1.5 mt-1.5 text-amber-600 text-[11.5px]">
-          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-px" />
-          {warning}
-        </div>
-      )}
-
-      {/* File chips */}
-      {files.length > 0 && (
-        <div className="flex flex-wrap gap-2 mt-2">
-          {files.map((f, i) => (
-            <div
-              key={i}
-              className="flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-lg px-2.5 py-1 text-[11.5px] text-green-800"
-            >
-              <span className="max-w-[130px] truncate">{f.name}</span>
-              <button
-                type="button"
-                onClick={() => onRemove(i)}
-                className="text-green-500 hover:text-red-500 transition-colors"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Shared input class ────────────────────────────────────────────────────
 const inputCls =
   "w-full px-3.5 py-3 rounded-xl border-[1.5px] border-gray bg-white text-[13.5px] placeholder-gray-400 focus:outline-none focus:border-green-800";
 
-// ── Main Component ────────────────────────────────────────────────────────
+// iFields PUBLIC key — safe for frontend. Sandbox iFields Key.
+const SOLA_IFIELDS_KEY = "ifields_matanashopdevc161df9081ad4e24a866367f";
+
 export default function Pricing() {
   const formRef = useRef(null);
 
-  // ── API hooks ─────────────────────────────────────────────────────────
   const { data: plansData, isLoading: plansLoading } = useGetPlansQuery();
   const { data: categoriesData, isLoading: catsLoading } = useGetCategoriesQuery();
-  const { data: communities, isLoading: communitiesLoading } = useGetCommunitiesQuery();
+  const { data: communities } = useGetCommunitiesQuery();
   const [uploadMedia] = useUploadMediaMutation();
   const [registerBusiness, { isLoading: submitting }] = useRegisterBusinessMutation();
 
-  // ── Plan selection ────────────────────────────────────────────────────
   const [plan, setPlan] = useState("standard");
   const planMeta = PLAN_META[plan] ?? PLAN_META.standard;
 
@@ -158,11 +91,9 @@ export default function Pricing() {
     ...PLAN_META[p.tier],
   }));
 
-  // ── Payment options ───────────────────────────────────────────────────
   const [paymentType, setPaymentType] = useState("recurring");
   const [durationMonths, setDurationMonths] = useState(3);
 
-  // ── Categories (store full {id, name} objects) ────────────────────────
   const [cats, setCats] = useState([]);
   const toggleCat = (cat) =>
     setCats((prev) =>
@@ -171,7 +102,6 @@ export default function Pricing() {
         : [...prev, cat]
     );
 
-  // ── Form fields ───────────────────────────────────────────────────────
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [contactName, setContactName] = useState("");
@@ -187,28 +117,97 @@ export default function Pricing() {
   const [otherSocialLink, setOtherSocialLink] = useState("");
   const [servicesTags, setServicesTags] = useState("");
   const [website, setWebsite] = useState("");
-  const [promoVideoLink, setPromoVideoLink] = useState("");
 
-  // ── Image state ───────────────────────────────────────────────────────
+  // ── Card fields ──
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [iFieldsReady, setIFieldsReady] = useState(false);
+
+  // Refs to the hidden inputs Cardknox's script populates with SUTs
+  const cardNumTokenRef = useRef(null);
+  const cvvTokenRef = useRef(null);
+
+  const handleExpiryChange = (e) => {
+    let raw = e.target.value.replace(/\D/g, "").slice(0, 4);
+    if (raw.length >= 3) raw = raw.slice(0, 2) + "/" + raw.slice(2);
+    setCardExpiry(raw);
+  };
+
+  const [promoVideoLink, setPromoVideoLink] = useState("");
   const [galleryFiles, setGalleryFiles] = useState([]);
   const [galleryWarning, setGalleryWarning] = useState("");
   const [flyerFiles, setFlyerFiles] = useState([]);
+  const [cardTokenReady, setCardTokenReady] = useState(false);
+  const [tokenizing, setTokenizing] = useState(false);
 
-  // ── Submit feedback ───────────────────────────────────────────────────
+ useEffect(() => {
+  const SCRIPT_SRC = "https://cdn.cardknox.com/ifields/2.15.2401.3101/ifields.min.js";
+
+  const initAccount = () => {
+    try {
+      window.setAccount(SOLA_IFIELDS_KEY, "JoeZwick", "1.0");
+      if (typeof window.enableAutoFormatting === "function") {
+        window.enableAutoFormatting();
+      }
+      if (typeof window.setIfieldStyle === "function") {
+        const style = {
+          width: "100%",
+          height: "100%",
+          border: "none",
+          outline: "none",
+          "box-sizing": "border-box",
+          "font-size": "13.5px",
+          color: "#111827",
+        };
+        window.setIfieldStyle("card-number", style);
+        window.setIfieldStyle("cvv", style);
+      }
+      setIFieldsReady(true);
+    } catch (e) {
+      console.error("iFields init error:", e);
+    }
+  };
+
+  // Already loaded (e.g. by a previous mount / fast nav)
+  if (typeof window.setAccount === "function") {
+    initAccount();
+    return;
+  }
+
+  // Avoid injecting the script twice if it's already in-flight
+  let script = document.querySelector(`script[src="${SCRIPT_SRC}"]`);
+  if (!script) {
+    script = document.createElement("script");
+    script.src = SCRIPT_SRC;
+    script.async = true;
+    document.body.appendChild(script);
+  }
+
+  script.addEventListener("load", initAccount);
+  script.addEventListener("error", () =>
+    console.error("Failed to load Cardknox ifields.min.js")
+  );
+
+  return () => {
+    script.removeEventListener("load", initAccount);
+  };
+}, []);
+
   const [uploadingImages, setUploadingImages] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  // ── Derived values ────────────────────────────────────────────────────
   const selectedPlanApi = (plansData ?? []).find((p) => p.tier === plan);
-  const basePrice = selectedPlanApi ? parseFloat(selectedPlanApi.base_price) : 0;
-  const displayAmount =
-    paymentType === "one_time"
-      ? `$${(basePrice * durationMonths).toFixed(0)} total`
-      : `$${basePrice.toFixed(0)}/month`;
   const descOverLimit = description.length > planMeta.maxDescChars;
 
-  // Reset gallery if plan downgrades below current photo count
+  const orderSummaryArgs = selectedPlanApi?.id
+    ? { plan_id: selectedPlanApi.id, duration_months: durationMonths, payment_type: paymentType }
+    : null;
+  const {
+    data: orderSummary,
+    isLoading: summaryLoading,
+    isError: summaryError,
+  } = useGetOrderSummaryQuery(orderSummaryArgs, { skip: !orderSummaryArgs });
+
   useEffect(() => {
     if (galleryFiles.length > planMeta.maxPhotos) {
       setGalleryFiles((prev) => prev.slice(0, planMeta.maxPhotos));
@@ -222,13 +221,11 @@ export default function Pricing() {
     }
   }, [plan]);
 
-  // Scroll form into view on plan change
   useEffect(() => {
     if (formRef.current)
       formRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [plan]);
 
-  // ── Gallery handlers ──────────────────────────────────────────────────
   const handleAddGallery = (newFiles) => {
     setGalleryWarning("");
     if (planMeta.maxPhotos === 0) {
@@ -260,28 +257,114 @@ export default function Pricing() {
 
   // ── Submit handler ────────────────────────────────────────────────────
   const handleSubmit = async () => {
-    setSubmitError("");
+  setSubmitError("");
+  if (!name.trim() || !contactName.trim() || !contactPhone.trim() || !contactEmail.trim() || !city.trim()) {
+    setSubmitError("Please fill in all required fields (marked with *).");
+    return;
+  }
+  if (descOverLimit) {
+    setSubmitError(`Description exceeds the ${planMeta.maxDescChars}-character limit for ${planMeta.name}.`);
+    return;
+  }
+  if (!cardExpiry || cardExpiry.length < 5) {
+    setSubmitError("Please enter a valid expiry date (MM/YY).");
+    return;
+  }
 
-    // Basic validation
-    if (
-      !name.trim() ||
-      !contactName.trim() ||
-      !contactPhone.trim() ||
-      !contactEmail.trim() ||
-      !city.trim()
-    ) {
-      setSubmitError("Please fill in all required fields (marked with *).");
-      return;
+  try {
+    // Step 1 — Upload images FIRST (nothing time-sensitive here)
+    setUploadingImages(true);
+    const photoIds = [];
+    for (const file of galleryFiles) {
+      const fd = new FormData();
+      fd.append("image", file);
+      const res = await uploadMedia(fd).unwrap();
+      if (res[0]?.id) photoIds.push(res[0].id);
     }
-    if (descOverLimit) {
-      setSubmitError(
-        `Description exceeds the ${planMeta.maxDescChars}-character limit for ${planMeta.name}. Please shorten it.`
+    let flyerImageId = null;
+    for (const file of flyerFiles) {
+      const fd = new FormData();
+      fd.append("image", file);
+      const res = await uploadMedia(fd).unwrap();
+      if (res[0]?.id) flyerImageId = res[0].id;
+    }
+    setUploadingImages(false);
+
+    // Step 2 — Tokenize card LAST, right before registerBusiness
+    setTokenizing(true);
+    let cardToken = "";
+    let cvvToken = "";
+    await new Promise((resolve, reject) => {
+      if (typeof window.getTokens !== "function") {
+        reject(new Error("Cardknox script not loaded"));
+        return;
+      }
+      window.getTokens(
+        function () {
+          const cardEl = document.getElementById("card-number-token");
+          const cvvEl = document.getElementById("cvv-token");
+          cardToken = cardEl ? cardEl.value : "";
+          cvvToken = cvvEl ? cvvEl.value : "";
+          resolve();
+        },
+        function (err) { reject(new Error(err || "Cardknox tokenization error")); },
+        30000
       );
+    });
+    setTokenizing(false);
+
+    console.log("Raw cardToken value:", JSON.stringify(cardToken));
+
+    if (!cardToken || cardToken.includes("error") || cardToken.includes("cc_error")) {
+      setSubmitError("Invalid card details. Please check your card number and try again.");
       return;
     }
+    setCardTokenReady(true);
 
+    // Step 3 — Register immediately, no delay after this point
+    const body = {
+      name, description,
+      categories: cats.map((c) => c.id),
+      contact_email: contactEmail,
+      contact_name: contactName,
+      contact_phone: contactPhone,
+      community_id: city ? parseInt(city, 10) : null,
+      business_address: businessAddress,
+      business_phone: businessPhone,
+      business_hours: businessHours,
+      serving_areas: servingAreas,
+      instagram, facebook,
+      other_social_link: otherSocialLink,
+      services_tags: servicesTags,
+      website,
+      plan_id: selectedPlanApi?.id,
+      payment_type: paymentType,
+      duration_months: durationMonths,
+      payment_method_id: cardToken,
+      card_exp: cardExpiry.replace("/", ""),
+      photo_ids: photoIds,
+      flyer_image: flyerImageId,
+      ...(plan === "premium" && promoVideoLink ? { promo_video_link: promoVideoLink } : {}),
+    };
+
+    const response = await registerBusiness(body).unwrap();
+    setSubmitSuccess(true);
+  } catch (err) {
+    setUploadingImages(false);
+    setTokenizing(false);
+    const errData = err?.data;
+    if (errData && typeof errData === "object") {
+      setSubmitError(Object.entries(errData).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`).join(" · "));
+    } else if (typeof errData === "string") {
+      setSubmitError(errData);
+    } else {
+      setSubmitError(err?.message || "Something went wrong. Please try again.");
+    }
+  }
+};
+
+  const submitRegistration = async (cardSut, cvvSut, expiry) => {
     try {
-      // Step 1 — Upload gallery + flyer images sequentially
       setUploadingImages(true);
       const photoIds = [];
 
@@ -289,7 +372,6 @@ export default function Pricing() {
         const fd = new FormData();
         fd.append("image", file);
         const res = await uploadMedia(fd).unwrap();
-        console.log("gallery upload res::", res);
         if (res[0]?.id) photoIds.push(res[0].id);
       }
 
@@ -298,13 +380,11 @@ export default function Pricing() {
         const fd = new FormData();
         fd.append("image", file);
         const res = await uploadMedia(fd).unwrap();
-        console.log("flyer upload res::", res);
         if (res[0]?.id) flyerImageId = res[0].id;
       }
 
       setUploadingImages(false);
 
-      // Step 2 — Register business
       const body = {
         name,
         description,
@@ -325,7 +405,8 @@ export default function Pricing() {
         plan_id: selectedPlanApi?.id,
         payment_type: paymentType,
         duration_months: durationMonths,
-        payment_method_id: "pm_card_visa",
+        payment_method_id: cardSut,
+        card_exp: expiry,
         photo_ids: photoIds,
         flyer_image: flyerImageId,
         ...(plan === "premium" && promoVideoLink
@@ -333,9 +414,18 @@ export default function Pricing() {
           : {}),
       };
 
-      await registerBusiness(body).unwrap();
+      console.log("=== SUBMITTING BUSINESS REGISTRATION TO API ===");
+      console.log("Payload body:", JSON.stringify(body, null, 2));
+
+      const response = await registerBusiness(body).unwrap();
+      console.log("=== REGISTRATION SUCCESS RESPONSE ===", response);
       setSubmitSuccess(true);
     } catch (err) {
+      console.error("=== REGISTRATION API ERROR RESPONSE ===");
+      console.error("Full Error Object:", err);
+      console.error("Error Status:", err?.status);
+      console.error("Error Response Data:", err?.data);
+
       setUploadingImages(false);
       const errData = err?.data;
       if (errData && typeof errData === "object") {
@@ -343,13 +433,14 @@ export default function Pricing() {
           .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
           .join(" · ");
         setSubmitError(messages);
+      } else if (typeof errData === "string") {
+        setSubmitError(errData);
       } else {
         setSubmitError("Something went wrong. Please try again.");
       }
     }
   };
 
-  // ── Success screen ────────────────────────────────────────────────────
   if (submitSuccess) {
     return (
       <div className="bg-[#f8f7f3] min-h-[60vh] flex items-center justify-center p-8">
@@ -367,10 +458,8 @@ export default function Pricing() {
     );
   }
 
-  // ── Render ────────────────────────────────────────────────────────────
   return (
     <div className="bg-[#f8f7f3] font-inter text-gray-900">
-      {/* ── Hero ── */}
       <div className="px-6 pt-6 pb-16 text-center">
         <div className="text-xs sm:text-sm tracking-widest uppercase text-primary font-semibold mb-4">
           MATANA &middot; BUSINESS DIRECTORY
@@ -385,519 +474,86 @@ export default function Pricing() {
       </div>
 
       <div className="max-w-5xl mx-auto px-6 pb-20">
-        {/* ── Step 1: Plan Cards ── */}
-        <div className="grid md:grid-cols-3 gap-5 -mt-7 relative z-10">
-          {plansLoading &&
-            [1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="bg-white border border-gray-200 rounded-2xl p-6 h-64 animate-pulse"
-              />
-            ))}
-          {PLANS.map((p) => {
-            const selected = plan === p.id;
-            return (
-              <div
-                key={p.id}
-                onClick={() => setPlan(p.id)}
-                className={`relative border-[1.5px] ${p.bg} rounded-2xl p-6 pt-7 flex flex-col cursor-pointer transition-all ${
-                  selected
-                    ? "border-green-800 shadow-lg"
-                    : "border-gray-200 shadow-sm"
-                }`}
-              >
-                {p.badge && (
-                  <span className="absolute -top-3 right-5 bg-green-900 text-white text-[11px] font-semibold px-3 py-1 rounded-full">
-                    {p.badge}
-                  </span>
-                )}
-                <div className="w-9 h-9 rounded-full bg-green-900 text-white flex items-center justify-center mb-4">
-                  <img src={p.icon} alt={p.name} />
-                </div>
-                <div className="font-bold text-[15px] mb-1">{p.name}</div>
-                <div className="text-2xl font-bold mb-1">
-                  {p.price}{" "}
-                  <span className="text-[13px] font-medium text-gray-500">/month</span>
-                </div>
-                <p className="text-[12.5px] text-gray-500 my-2 leading-relaxed min-h-[36px]">
-                  {p.sub}
-                </p>
-                <ul className="flex-grow space-y-2.5 mb-5">
-                  {p.features.map((f) => (
-                    <li key={f} className="flex gap-2 text-[13px] leading-snug">
-                      <Check className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setPlan(p.id);
-                  }}
-                  className={`w-full py-2.5 rounded-full text-[13.5px] font-semibold border-[1.5px] transition-colors ${
-                    selected
-                      ? "bg-green-900 border-green-900 text-white hover:bg-green-800"
-                      : "bg-transparent border-green-900 text-green-900 hover:bg-green-50"
-                  }`}
-                >
-                  Choose {p.name.split(" ")[0]}
-                </button>
-              </div>
-            );
-          })}
-        </div>
+        <PlanSelection
+          plans={PLANS}
+          currentPlan={plan}
+          plansLoading={plansLoading}
+          onSelectPlan={setPlan}
+        />
 
-        {/* ── Form ── */}
         <div ref={formRef} className="bg-white rounded-3xl p-6 md:p-9 mt-8 space-y-5">
+          <PaymentSection
+            paymentType={paymentType}
+            setPaymentType={setPaymentType}
+            durationMonths={durationMonths}
+            setDurationMonths={setDurationMonths}
+            planMeta={planMeta}
+            orderSummary={orderSummary}
+            summaryLoading={summaryLoading}
+            summaryError={summaryError}
+            cardExpiry={cardExpiry}
+            handleExpiryChange={handleExpiryChange}
+            iFieldsReady={iFieldsReady}
+            cardTokenReady={cardTokenReady}
+            cardNumTokenRef={cardNumTokenRef}
+            cvvTokenRef={cvvTokenRef}
+            inputCls={inputCls}
+          />
 
-          {/* ── Step 2: Payment Type & Duration ── */}
-          <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 space-y-4">
-            <p className="text-[13px] font-bold text-gray-800 mb-1">
-              Payment Options
-            </p>
-
-            {/* Payment type */}
-            <div>
-              <p className="text-[12.5px] font-semibold text-gray-600 mb-2">
-                Payment Type
-              </p>
-              <div className="flex gap-3">
-                {PAYMENT_TYPES.map((pt) => (
-                  <button
-                    key={pt.value}
-                    type="button"
-                    onClick={() => setPaymentType(pt.value)}
-                    className={`flex-1 py-2.5 rounded-xl text-[12.5px] font-semibold border-[1.5px] transition-colors ${
-                      paymentType === pt.value
-                        ? "bg-green-900 border-green-900 text-white"
-                        : "bg-white border-gray-200 text-gray-700 hover:border-green-300"
-                    }`}
-                  >
-                    {pt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Duration */}
-            <div>
-              <p className="text-[12.5px] font-semibold text-gray-600 mb-2">
-                Duration
-              </p>
-              <div className="flex gap-3">
-                {DURATION_OPTIONS.map((d) => (
-                  <button
-                    key={d.value}
-                    type="button"
-                    onClick={() => setDurationMonths(d.value)}
-                    className={`flex-1 py-2.5 rounded-xl text-[12.5px] font-semibold border-[1.5px] transition-colors ${
-                      durationMonths === d.value
-                        ? "bg-green-900 border-green-900 text-white"
-                        : "bg-white border-gray-200 text-gray-700 hover:border-green-300"
-                    }`}
-                  >
-                    {d.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Summary pill */}
-            <div className="text-[12px] text-green-800 font-semibold bg-green-50 border border-green-100 rounded-xl px-4 py-2.5">
-              {planMeta.name} &middot;{" "}
-              {paymentType === "recurring" ? "Monthly Recurring" : "One-Time Payment"} &middot;{" "}
-              {durationMonths} months &middot; {displayAmount}
-            </div>
-          </div>
-
-          {/* ── Business Name ── */}
-          <div>
-            <label className="block text-[13px] font-semibold mb-1.5">
-              Business Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              placeholder="Enter your business name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className={inputCls}
-            />
-          </div>
-
-          {/* ── Categories ── */}
-          <div>
-            <label className="block text-[13px] font-semibold mb-2.5">
-              Categories <span className="text-red-500">*</span>
-            </label>
-            <div className="flex flex-wrap gap-2 mb-1.5">
-              {catsLoading && (
-                <div className="w-full h-8 rounded-full bg-gray-100 animate-pulse" />
-              )}
-              {(categoriesData ?? []).map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => toggleCat(cat)}
-                  className={`px-4 py-2 rounded-full text-[12.5px] border-[1.5px] transition-colors ${
-                    cats.some((c) => c.id === cat.id)
-                      ? "bg-green-900 border-green-900 text-white"
-                      : "bg-white border-gray-200 text-gray-900 hover:border-green-300"
-                  }`}
-                >
-                  {cat.name}
-                </button>
-              ))}
-            </div>
-            <div className="text-[11.5px] text-gray-500">Select all that apply</div>
-          </div>
-
-          {/* ── Contact name + phone ── */}
-          <div className="grid md:grid-cols-2 gap-5">
-            <div>
-              <label className="block text-[13px] font-semibold mb-1.5">
-                Contact name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                placeholder="Who should we reach out to?"
-                value={contactName}
-                onChange={(e) => setContactName(e.target.value)}
-                className={inputCls}
-              />
-            </div>
-            <div>
-              <label className="block text-[13px] font-semibold mb-1.5">
-                Contact phone <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="tel"
-                placeholder="(000) 000-0000"
-                value={contactPhone}
-                onChange={(e) => setContactPhone(e.target.value)}
-                className={inputCls}
-              />
-              <div className="text-[11.5px] text-gray-500 mt-1">
-                For internal use only, will not be shown publicly
-              </div>
-            </div>
-          </div>
-
-          {/* ── Email + City ── */}
-          <div className="grid md:grid-cols-2 gap-5">
-            <div>
-              <label className="block text-[13px] font-semibold mb-1.5">
-                Email <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="email"
-                placeholder="you@business.com"
-                value={contactEmail}
-                onChange={(e) => setContactEmail(e.target.value)}
-                className={inputCls}
-              />
-            </div>
-            <div>
-              <label className="block text-[13px] font-semibold mb-1.5">
-                City <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                className={`${inputCls} appearance-none cursor-pointer pr-10`}
-              >
-                <option value="">Select a city</option>
-                {(communities ?? []).map((com) => (
-                  <option key={com.id} value={com.id}>
-                    {com.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* ── Business address + phone ── */}
-          <div className="grid md:grid-cols-2 gap-5">
-            <div>
-              <label className="block text-[13px] font-semibold mb-1.5">
-                Business address <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                placeholder="Street address"
-                value={businessAddress}
-                onChange={(e) => setBusinessAddress(e.target.value)}
-                className={inputCls}
-              />
-            </div>
-            <div>
-              <label className="block text-[13px] font-semibold mb-1.5">
-                Business phone number <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="tel"
-                placeholder="(000) 000-0000"
-                value={businessPhone}
-                onChange={(e) => setBusinessPhone(e.target.value)}
-                className={inputCls}
-              />
-              <div className="text-[11.5px] text-gray-500 mt-1">
-                This number will be shown publicly
-              </div>
-            </div>
-          </div>
-
-          {/* ── Business hours ── */}
-          <div>
-            <label className="block text-[13px] font-semibold mb-1.5">
-              Business hours
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Sun-Thu 9am-6pm, Fri 9am-2pm, Sat closed"
-              value={businessHours}
-              onChange={(e) => setBusinessHours(e.target.value)}
-              className={inputCls}
-            />
-          </div>
-
-          {/* ── Serving areas ── */}
-          <div>
-            <label className="block text-[13px] font-semibold mb-1.5">
-              Serving areas{" "}
-              <span className="text-gray-500 font-normal text-[12px]">optional</span>
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. New York, New Jersey"
-              value={servingAreas}
-              onChange={(e) => setServingAreas(e.target.value)}
-              className={inputCls}
-            />
-          </div>
-
-          {/* ── Instagram + Facebook ── */}
-          <div className="grid md:grid-cols-2 gap-5">
-            <div>
-              <label className="block text-[13px] font-semibold mb-1.5">
-                Instagram
-              </label>
-              <input
-                type="text"
-                placeholder="@yourbusiness"
-                value={instagram}
-                onChange={(e) => setInstagram(e.target.value)}
-                className={inputCls}
-              />
-            </div>
-            <div>
-              <label className="block text-[13px] font-semibold mb-1.5">
-                Facebook
-              </label>
-              <input
-                type="text"
-                placeholder="facebook.com/yourbusiness"
-                value={facebook}
-                onChange={(e) => setFacebook(e.target.value)}
-                className={inputCls}
-              />
-            </div>
-          </div>
-
-          {/* ── Other social ── */}
-          <div>
-            <label className="block text-[13px] font-semibold mb-1.5">
-              Other social link{" "}
-              <span className="text-gray-500 font-normal text-[12px]">
-                optional — TikTok, LinkedIn, etc.
-              </span>
-            </label>
-            <input
-              type="text"
-              value={otherSocialLink}
-              onChange={(e) => setOtherSocialLink(e.target.value)}
-              className={inputCls}
-            />
-          </div>
-
-          {/* ── Services / tags ── */}
-          <div>
-            <label className="block text-[13px] font-semibold mb-1.5">
-              Services / tags
-            </label>
-            <input
-              type="text"
-              placeholder="comma separated, e.g. Catering, Bar Mitzvah, Kosher"
-              value={servicesTags}
-              onChange={(e) => setServicesTags(e.target.value)}
-              className={inputCls}
-            />
-            <div className="text-[11.5px] text-gray-500 mt-1">
-              This helps people find you when searching for specific services
-            </div>
-          </div>
-
-          {/* ── Website ── */}
-          <div>
-            <label className="block text-[13px] font-semibold mb-1.5">
-              Website{" "}
-              <span className="text-gray-500 font-normal text-[12px]">optional</span>
-            </label>
-            <input
-              type="text"
-              value={website}
-              onChange={(e) => setWebsite(e.target.value)}
-              className={inputCls}
-            />
-          </div>
-
-          {/* ── Description with per-plan char limit ── */}
-          <div>
-            <label className="block text-[13px] font-semibold mb-1.5">
-              Description <span className="text-red-500">*</span>
-            </label>
-            <textarea
-              placeholder="What do you offer? Who is it for?"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className={`w-full min-h-[90px] px-3.5 py-3 rounded-xl border-[1.5px] ${
-                descOverLimit ? "border-red-400" : "border-gray-200"
-              } bg-white text-[13.5px] placeholder-gray-400 focus:outline-none focus:border-green-800`}
-            />
-            <div
-              className={`text-[11.5px] mt-1 text-right font-medium ${
-                descOverLimit ? "text-red-500" : "text-gray-500"
-              }`}
-            >
-              {description.length} / {planMeta.maxDescChars}
-            </div>
-            {descOverLimit && (
-              <div className="flex items-start gap-1.5 mt-1 text-red-500 text-[11.5px]">
-                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-px" />
-                {planMeta.name} allows up to {planMeta.maxDescChars} characters. Please shorten your description or upgrade your plan.
-              </div>
-            )}
-          </div>
-
-          {/* ── Featured: photo gallery (up to 5) ── */}
-          {plan === "featured" && (
-            <div>
-              <label className="block text-[13px] font-semibold mb-1.5">
-                Photo gallery{" "}
-                <span className="text-gray-500 font-normal text-[12px]">
-                  (up to 5 photos — {galleryFiles.length} / 5 added)
-                </span>
-              </label>
-              <UploadBox
-                label="Click to upload photos (JPG or PNG)"
-                multiple
-                files={galleryFiles}
-                onAdd={handleAddGallery}
-                onRemove={handleRemoveGallery}
-                warning={galleryWarning}
-              />
-            </div>
-          )}
-
-          {/* ── Premium: photo gallery (up to 10) + promo video ── */}
-          {plan === "premium" && (
-            <>
-              <div>
-                <label className="block text-[13px] font-semibold mb-1.5">
-                  Photo gallery{" "}
-                  <span className="text-gray-500 font-normal text-[12px]">
-                    (up to 10 photos — {galleryFiles.length} / 10 added)
-                  </span>
-                </label>
-                <UploadBox
-                  label="Click to upload photos (JPG or PNG)"
-                  multiple
-                  files={galleryFiles}
-                  onAdd={handleAddGallery}
-                  onRemove={handleRemoveGallery}
-                  warning={galleryWarning}
-                />
-              </div>
-              <div>
-                <label className="block text-[13px] font-semibold mb-1.5">
-                  Promo video URL{" "}
-                  <span className="text-gray-500 font-normal text-[12px]">
-                    optional — YouTube, Vimeo, etc.
-                  </span>
-                </label>
-                <input
-                  type="url"
-                  placeholder="https://youtube.com/..."
-                  value={promoVideoLink}
-                  onChange={(e) => setPromoVideoLink(e.target.value)}
-                  className={inputCls}
-                />
-              </div>
-            </>
-          )}
-
-          {/* ── Payment / billing box ── */}
-          {/* <div className="bg-amber-50 border-[1.5px] border-amber-200 rounded-2xl p-5 text-[12.5px] leading-relaxed text-amber-900">
-            Matana offers a 30-day free trial. Your card will be securely tokenized
-            but will not be charged unless or until your free trial ends. During your
-            free trial, you can upgrade or downgrade at any time. After that, your
-            card will be automatically charged{" "}
-            <strong>{displayAmount}</strong> until you cancel. You can cancel or
-            downgrade at any time from your account settings.
-            <div className="flex gap-2.5 mt-3">
-              <input
-                type="text"
-                placeholder="Payment method ID (e.g. pm_1xyz…)"
-                value={paymentMethodId}
-                onChange={(e) => setPaymentMethodId(e.target.value)}
-                className="flex-1 px-3.5 py-2.5 rounded-lg border-[1.5px] border-amber-200 bg-white text-[13px] placeholder-gray-400 focus:outline-none focus:border-green-800"
-              />
-              <button
-                type="button"
-                className="px-5 rounded-lg bg-green-900 text-white font-semibold text-[13px] hover:bg-green-800"
-              >
-                Save
-              </button>
-            </div>
-          </div> */}
-
-          {/* ── Flyer image ── */}
-          <div>
-            <label className="block text-[13px] font-semibold mb-1.5">
-              Flyer image <span className="text-red-500">*</span>
-            </label>
-            <UploadBox
-              label="Click to upload your flyer (JPG or PNG)"
-              files={flyerFiles}
-              onAdd={(newFiles) => setFlyerFiles(newFiles.slice(0, 1))}
-              onRemove={() => setFlyerFiles([])}
-            />
-          </div>
-
-          {/* ── Error banner ── */}
-          {submitError && (
-            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-[12.5px] text-red-700">
-              <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              <span>{submitError}</span>
-            </div>
-          )}
-
-          {/* ── Submit button ── */}
-          <div className="flex justify-end pt-1">
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={submitting || uploadingImages || descOverLimit}
-              className="bg-green-900 text-white px-7 py-3 rounded-full font-bold text-[13.5px] hover:bg-green-800 disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
-            >
-              {uploadingImages
-                ? "Uploading images…"
-                : submitting
-                ? "Submitting…"
-                : "Submit Business"}
-            </button>
-          </div>
+          <BusinessDetailsFields
+            name={name}
+            setName={setName}
+            description={description}
+            setDescription={setDescription}
+            cats={cats}
+            toggleCat={toggleCat}
+            categoriesData={categoriesData}
+            catsLoading={catsLoading}
+            contactName={contactName}
+            setContactName={setContactName}
+            contactPhone={contactPhone}
+            setContactPhone={setContactPhone}
+            contactEmail={contactEmail}
+            setContactEmail={setContactEmail}
+            city={city}
+            setCity={setCity}
+            communities={communities}
+            businessAddress={businessAddress}
+            setBusinessAddress={setBusinessAddress}
+            businessPhone={businessPhone}
+            setBusinessPhone={setBusinessPhone}
+            businessHours={businessHours}
+            setBusinessHours={setBusinessHours}
+            servingAreas={servingAreas}
+            setServingAreas={setServingAreas}
+            instagram={instagram}
+            setInstagram={setInstagram}
+            facebook={facebook}
+            setFacebook={setFacebook}
+            otherSocialLink={otherSocialLink}
+            setOtherSocialLink={setOtherSocialLink}
+            servicesTags={servicesTags}
+            setServicesTags={setServicesTags}
+            website={website}
+            setWebsite={setWebsite}
+            plan={plan}
+            planMeta={planMeta}
+            descOverLimit={descOverLimit}
+            galleryFiles={galleryFiles}
+            handleAddGallery={handleAddGallery}
+            handleRemoveGallery={handleRemoveGallery}
+            galleryWarning={galleryWarning}
+            promoVideoLink={promoVideoLink}
+            setPromoVideoLink={setPromoVideoLink}
+            flyerFiles={flyerFiles}
+            setFlyerFiles={setFlyerFiles}
+            submitError={submitError}
+            handleSubmit={handleSubmit}
+            submitting={submitting}
+            uploadingImages={uploadingImages}
+            tokenizing={tokenizing}
+            inputCls={inputCls}
+          />
         </div>
       </div>
     </div>

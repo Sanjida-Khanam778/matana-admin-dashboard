@@ -8,7 +8,7 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex font-nunito">
+    <div className="flex font-nunito h-screen overflow-hidden">
       {!sidebarOpen && (
         <button
           className="lg:hidden absolute top-4 left-4 z-30 bg-primary rounded-full p-2 shadow-lg"
@@ -21,7 +21,7 @@ export default function Dashboard() {
 
       {/* Sidebar */}
       <div
-        className={`h-screen flex-shrink-0 transition-all duration-300 bg-primary 
+        className={`flex-shrink-0 transition-all duration-300 bg-primary 
           ${sidebarOpen ? "fixed inset-0 z-40 w-64" : "w-72 lg:relative lg:w-72"
           }
           ${!sidebarOpen ? "hidden lg:block" : ""}
@@ -48,7 +48,7 @@ export default function Dashboard() {
           onClick={() => setSidebarOpen(false)}
         />
       )}
-      <div className="flex flex-col flex-1 font-nunito h-screen overflow-y-auto">
+      <div className="flex flex-col flex-1 font-nunito h-screen overflow-y-auto no-scrollbar">
         <Navbar />
         <Outlet />
       </div>

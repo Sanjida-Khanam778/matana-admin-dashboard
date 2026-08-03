@@ -608,7 +608,7 @@ export default function AllBusinessListing() {
   };
 
   return (
-    <div className="bg-[#F4F1EA] min-h-screen p-6 sm:p-10">
+    <div className="bg-[#F4F1EA] p-6 sm:p-10">
       <div className="mx-auto max-w-6xl">
         <h1 className="text-xl font-bold text-stone-900 mb-4">
           All Business Listing
