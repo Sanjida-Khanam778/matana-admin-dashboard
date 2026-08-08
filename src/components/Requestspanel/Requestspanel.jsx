@@ -52,9 +52,15 @@ function ListingCard({ business, onReview }) {
   const [rejectBusiness, { isLoading: rejecting }] = useRejectBusinessMutation();
 
   const imgSrc = mediaUrl(business.flyer_image?.url);
-  const category = business.categories?.[0]?.name ?? "—";
-  const tier = business.plan?.tier ?? "—";
+  const category = business.categories?.[0]?.name;
+  const hasCategory = Boolean(category && category !== "—");
+
+  const hasPlan = Boolean(business.plan && business.plan.tier && business.plan.tier !== "—");
+  const tier = hasPlan ? business.plan.tier : null;
   const monthlyPrice = business.plan?.monthly_price ?? business.plan?.final_price ?? 0;
+
+  const userName = business.user?.name || business.user?.first_name || business.user?.email;
+  const hasSubmittedBy = Boolean(userName && userName !== "N/A");
 
   const handleReject = async () => {
     try {
@@ -79,28 +85,38 @@ function ListingCard({ business, onReview }) {
       </div>
       <div className="p-4 flex flex-col flex-1">
         <h3 className="text-sm font-semibold text-stone-900">{business.name}</h3>
-        <p className="text-xs text-stone-500 mt-1 capitalize">{tier} Plan</p>
-        <p className="text-sm font-semibold text-emerald-700 mt-1">
-          ${monthlyPrice}
-          <span className="text-xs font-normal text-stone-400">/month</span>
-        </p>
-        <p className="text-xs text-stone-400 mt-2">
-          Submitted by{" "}
-          <span className="font-medium text-stone-600">
-            {business.user?.name || "N/A"}
-          </span>
-        </p>
-        <div className="flex flex-wrap gap-2 mt-3">
-          <span className="rounded-full bg-stone-100 text-stone-600 text-xs px-2.5 py-1">
-            {category}
-          </span>
-          {business.city && (
-            <span className="rounded-full bg-stone-100 text-stone-600 text-xs px-2.5 py-1">
-              {business.city}
+        {hasPlan && (
+          <>
+            <p className="text-xs text-stone-500 mt-1 capitalize">{tier} Plan</p>
+            <p className="text-sm font-semibold text-emerald-700 mt-1">
+              ${monthlyPrice}
+              <span className="text-xs font-normal text-stone-400">/month</span>
+            </p>
+          </>
+        )}
+        {hasSubmittedBy && (
+          <p className="text-xs text-stone-400 mt-2">
+            Submitted by{" "}
+            <span className="font-medium text-stone-600">
+              {userName}
             </span>
-          )}
-        </div>
-        <div className="flex gap-2 mt-4 pt-1">
+          </p>
+        )}
+        {(hasCategory || business.city) && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {hasCategory && (
+              <span className="rounded-full bg-stone-100 text-stone-600 text-xs px-2.5 py-1">
+                {category}
+              </span>
+            )}
+            {business.city && (
+              <span className="rounded-full bg-stone-100 text-stone-600 text-xs px-2.5 py-1">
+                {business.city}
+              </span>
+            )}
+          </div>
+        )}
+        <div className="flex gap-2 mt-auto pt-4">
           <button
             onClick={handleReject}
             disabled={rejecting}
@@ -123,11 +139,12 @@ function ListingCard({ business, onReview }) {
 
 /* Field helper */
 function Field({ label, value, highlight }) {
+  if (!value || value === "—" || (typeof value === "string" && !value.trim())) return null;
   return (
     <div className="min-w-0">
       <p className="text-[11px] text-stone-400">{label}</p>
       <p className={`text-sm break-words leading-relaxed ${highlight ? "font-semibold text-emerald-700" : "text-stone-800"}`}>
-        {value || "—"}
+        {value}
       </p>
     </div>
   );
@@ -144,9 +161,14 @@ function ReviewModal({ open, onClose, business }) {
   const tags = business.services_tags
     ? business.services_tags.split(",").map((t) => t.trim()).filter(Boolean)
     : [];
+  const hasPlan = Boolean(business.plan && business.plan.tier && business.plan.tier !== "—");
   const monthlyPrice = business.plan?.monthly_price ?? business.plan?.final_price ?? 0;
-  const tier = business.plan?.tier ?? "—";
-  const categoryNames = business.categories?.map((c) => c.name).join(", ") || "—";
+  const tier = hasPlan ? business.plan.tier : null;
+  const categoryNames = business.categories?.map((c) => c.name).join(", ");
+
+  const userName = business.user?.name || business.user?.first_name;
+  const userEmail = business.user?.email;
+  const hasUser = Boolean(userName || userEmail);
 
   const handleApprove = async () => {
     try {
@@ -183,13 +205,15 @@ function ReviewModal({ open, onClose, business }) {
 
         <div className="px-6 py-5 space-y-5">
           <div>
-            <p className="text-xs text-stone-500">
-              Submitted by{" "}
-              <span className="font-semibold text-stone-800">
-                {business.user?.name || "N/A"}
-              </span>{" "}
-              ({business.user?.email || "N/A"})
-            </p>
+            {hasUser && (
+              <p className="text-xs text-stone-500">
+                Submitted by{" "}
+                <span className="font-semibold text-stone-800">
+                  {userName || userEmail}
+                </span>{" "}
+                {userEmail && userName ? `(${userEmail})` : ""}
+              </p>
+            )}
             <p className="text-xs text-stone-500 mt-1">
               Target Business:{" "}
               <span className="font-medium text-stone-700">{business.name}</span>
@@ -202,13 +226,15 @@ function ReviewModal({ open, onClose, business }) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0">
                 <Field label="Business Name" value={business.name} />
                 <Field label="Category" value={categoryNames} />
-                <div>
-                  <p className="text-[11px] text-stone-400 capitalize">{tier} Plan</p>
-                  <p className="text-sm font-semibold text-emerald-700">
-                    ${monthlyPrice}
-                    <span className="text-xs font-normal text-stone-400">/month</span>
-                  </p>
-                </div>
+                {hasPlan && (
+                  <div>
+                    <p className="text-[11px] text-stone-400 capitalize">{tier} Plan</p>
+                    <p className="text-sm font-semibold text-emerald-700">
+                      ${monthlyPrice}
+                      <span className="text-xs font-normal text-stone-400">/month</span>
+                    </p>
+                  </div>
+                )}
                 <Field label="Instagram" value={business.instagram} />
                 <Field label="Facebook" value={business.facebook} />
                 <Field label="Other social link" value={business.other_social_link} />

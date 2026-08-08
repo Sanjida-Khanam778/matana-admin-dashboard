@@ -75,6 +75,15 @@ export default function Sidebar() {
           </li>
           <li>
             <NavLink
+              to={"/plans"}
+              className="flex items-center px-8 py-4 hover:bg-white hover:text-primary"
+            >
+              <LuDollarSign className="text-xl mr-3" />
+              Pricing Plans
+            </NavLink>
+          </li>
+          <li>
+            <NavLink
               to={"/profile"}
               className="flex items-center px-8 py-4 hover:bg-white hover:text-primary"
             >

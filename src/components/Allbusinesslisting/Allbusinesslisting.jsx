@@ -17,9 +17,10 @@ import {
   useUpdateBusinessMutation,
   useDeleteBusinessMutation,
   useUploadMediaMutation,
+  useGetCategoriesQuery,
 } from "../../Api/dashboardApi";
 import { useGetCommunitiesQuery } from "../../Api/businessDirectoryApi";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /* ─── helpers ───*/
 
@@ -226,28 +227,215 @@ function ConfirmDelete({ business, onConfirm, onCancel, isLoading }) {
   );
 }
 
+/* ─── Plan Limits Metadata ─── */
+const PLAN_META = {
+  standard: {
+    name: "Standard Partner",
+    maxPhotos: 0,
+    maxDescChars: 250, // ~5 lines
+  },
+  featured: {
+    name: "Featured Partner",
+    maxPhotos: 5,
+    maxDescChars: 350, // ~7 lines
+  },
+  premium: {
+    name: "Premium Partner",
+    maxPhotos: 10,
+    maxDescChars: 500, // ~10 lines
+  },
+};
+
 /* ─── EditModal ─── */
 
 const FIELD_INPUT = (label, key, type = "text") => ({ label, key, type });
 const FIELDS_LEFT = [
   FIELD_INPUT("Business Name", "name"),
-  FIELD_INPUT("Description", "description"),
   FIELD_INPUT("Business Address", "business_address"),
-  FIELD_INPUT("Business Phone", "business_phone"),
-  FIELD_INPUT("Business Hours", "business_hours"),
-];
-const FIELDS_RIGHT = [
-  FIELD_INPUT("Contact Name", "contact_name"),
-  FIELD_INPUT("Contact Email", "contact_email", "email"),
-  FIELD_INPUT("Contact Phone", "contact_phone"),
-  FIELD_INPUT("Instagram", "instagram"),
-  FIELD_INPUT("Facebook", "facebook"),
-  FIELD_INPUT("Other Social", "other_social_link"),
-  FIELD_INPUT("Website", "website", "url"),
-  FIELD_INPUT("Promo Video", "promo_video_link", "url"),
+  FIELD_INPUT("Business Whatsapp Number", "business_phone"),
   FIELD_INPUT("Serving Areas", "serving_areas"),
-  FIELD_INPUT("Services Tags", "services_tags"),
 ];
+
+const DAYS_LIST = [
+  { label: "Monday", short: "Mon" },
+  { label: "Tuesday", short: "Tue" },
+  { label: "Wednesday", short: "Wed" },
+  { label: "Thursday", short: "Thu" },
+  { label: "Friday", short: "Fri" },
+  { label: "Saturday", short: "Sat" },
+  { label: "Sunday", short: "Sun" },
+];
+
+const TIME_OPTIONS = [
+  "6:00 AM",
+  "6:30 AM",
+  "7:00 AM",
+  "7:30 AM",
+  "8:00 AM",
+  "8:30 AM",
+  "9:00 AM",
+  "9:30 AM",
+  "10:00 AM",
+  "10:30 AM",
+  "11:00 AM",
+  "11:30 AM",
+  "12:00 PM",
+  "12:30 PM",
+  "1:00 PM",
+  "1:30 PM",
+  "2:00 PM",
+  "2:30 PM",
+  "3:00 PM",
+  "3:30 PM",
+  "4:00 PM",
+  "4:30 PM",
+  "5:00 PM",
+  "5:30 PM",
+  "6:00 PM",
+  "6:30 PM",
+  "7:00 PM",
+  "7:30 PM",
+  "8:00 PM",
+  "8:30 PM",
+  "9:00 PM",
+  "9:30 PM",
+  "10:00 PM",
+  "10:30 PM",
+  "11:00 PM",
+  "11:30 PM",
+  "12:00 AM",
+  "Closed",
+  "Open 24 Hours",
+];
+
+function BusinessHoursField({ value, onChange }) {
+  const [startDay, setStartDay] = useState("Monday");
+  const [endDay, setEndDay] = useState("Friday");
+  const [openTime, setOpenTime] = useState("9:00 AM");
+  const [closeTime, setCloseTime] = useState("6:00 PM");
+
+  const getShortDay = (dayName) =>
+    DAYS_LIST.find((d) => d.label === dayName)?.short || dayName;
+
+  const updateHours = (sDay, eDay, oTime, cTime) => {
+    setStartDay(sDay);
+    setEndDay(eDay);
+    setOpenTime(oTime);
+    setCloseTime(cTime);
+
+    const startShort = getShortDay(sDay);
+    const endShort = getShortDay(eDay);
+
+    const dayText =
+      !eDay || eDay === "None" || eDay === sDay
+        ? startShort
+        : `${startShort} - ${endShort}`;
+
+    let result = "";
+    if (oTime === "Open 24 Hours" || cTime === "Open 24 Hours") {
+      result = `${dayText}: Open 24 Hours`;
+    } else if (cTime === "Closed") {
+      result = `${dayText}: Closed`;
+    } else {
+      result = `${dayText}: ${oTime} - ${cTime}`;
+    }
+
+    onChange({ target: { value: result } });
+  };
+
+  return (
+    <div className="space-y-2 col-span-1 sm:col-span-2 bg-stone-50/80 p-3.5 rounded-xl border border-stone-200/80">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-semibold text-stone-700">
+          Business Hours
+        </label>
+        <span className="text-xs font-semibold text-emerald-800 bg-emerald-100/80 px-2.5 py-0.5 rounded-full">
+          {value || "Not set"}
+        </span>
+      </div>
+
+      {/* Select Dropdowns Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 pt-1">
+        <div>
+          <label className="text-[11px] font-medium text-stone-500 mb-1 block">
+            Start Day
+          </label>
+          <select
+            value={startDay}
+            onChange={(e) =>
+              updateHours(e.target.value, endDay, openTime, closeTime)
+            }
+            className="w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2 text-xs text-stone-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+          >
+            {DAYS_LIST.map((d) => (
+              <option key={d.label} value={d.label}>
+                {d.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="text-[11px] font-medium text-stone-500 mb-1 block">
+            End Day
+          </label>
+          <select
+            value={endDay}
+            onChange={(e) =>
+              updateHours(startDay, e.target.value, openTime, closeTime)
+            }
+            className="w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2 text-xs text-stone-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+          >
+            <option value="None">Same Day Only</option>
+            {DAYS_LIST.map((d) => (
+              <option key={d.label} value={d.label}>
+                {d.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="text-[11px] font-medium text-stone-500 mb-1 block">
+            Opening Time
+          </label>
+          <select
+            value={openTime}
+            onChange={(e) =>
+              updateHours(startDay, endDay, e.target.value, closeTime)
+            }
+            className="w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2 text-xs text-stone-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+          >
+            {TIME_OPTIONS.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="text-[11px] font-medium text-stone-500 mb-1 block">
+            Closing Time
+          </label>
+          <select
+            value={closeTime}
+            onChange={(e) =>
+              updateHours(startDay, endDay, openTime, e.target.value)
+            }
+            className="w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2 text-xs text-stone-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+          >
+            {TIME_OPTIONS.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function Field({ label, value, onChange, type = "text" }) {
   return (
@@ -291,14 +479,56 @@ function CityField({ value, onChange, communities, isLoading }) {
   );
 }
 
+function CategoriesSelector({ selectedCatIds = [], onChange, categoriesData = [], isLoading }) {
+  return (
+    <div className="space-y-1.5 col-span-1 sm:col-span-2">
+      <label className="text-xs font-medium text-stone-500">Categories</label>
+      {isLoading ? (
+        <div className="h-9 w-full bg-stone-100 rounded-lg animate-pulse" />
+      ) : (
+        <div className="flex flex-wrap gap-2 pt-1">
+          {categoriesData.map((cat) => {
+            const isSelected = selectedCatIds.includes(cat.id);
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => {
+                  if (isSelected) {
+                    onChange(selectedCatIds.filter((id) => id !== cat.id));
+                  } else {
+                    onChange([...selectedCatIds, cat.id]);
+                  }
+                }}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                  isSelected
+                    ? "bg-emerald-800 border-emerald-800 text-white"
+                    : "bg-white border-stone-200 text-stone-600 hover:border-emerald-600"
+                }`}
+              >
+                {cat.name}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function EditModal({ business, onClose, onSave, isSaving }) {
   const [form, setForm] = useState({});
   const [flyerFiles, setFlyerFiles] = useState([]);
-  const [flyerUploadError, setFlyerUploadError] = useState("");
-  const { data: communities = [], isLoading: communitiesLoading } =
-    useGetCommunitiesQuery();
-  const [uploadMedia, { isLoading: isUploadingFlyer }] =
-    useUploadMediaMutation();
+  const [bannerFiles, setBannerFiles] = useState([]);
+  const [galleryFiles, setGalleryFiles] = useState([]);
+  const [galleryWarning, setGalleryWarning] = useState("");
+  const [uploadError, setUploadError] = useState("");
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+
+  const { data: communities = [], isLoading: communitiesLoading } = useGetCommunitiesQuery();
+  const { data: categoriesData = [], isLoading: categoriesLoading } = useGetCategoriesQuery();
+  const [uploadMedia] = useUploadMediaMutation();
+
   const {
     data: businessDetails,
     isLoading: detailsLoading,
@@ -306,12 +536,26 @@ function EditModal({ business, onClose, onSave, isSaving }) {
   } = useGetBusinessByIdQuery(business?.id, {
     skip: !business?.id,
   });
+
   const activeBusiness = businessDetails ?? business;
+  const planTier = (activeBusiness?.plan?.tier || "standard").toLowerCase();
+  const planMeta = PLAN_META[planTier] ?? PLAN_META.standard;
+
+  const descLength = (form.description || "").length;
+  const descOverLimit = descLength > planMeta.maxDescChars;
 
   useEffect(() => {
     if (activeBusiness) {
       setFlyerFiles([]);
-      setFlyerUploadError("");
+      setBannerFiles([]);
+      setGalleryFiles([]);
+      setGalleryWarning("");
+      setUploadError("");
+
+      const initialCatIds = (activeBusiness.categories ?? []).map((c) =>
+        typeof c === "object" ? c.id : c
+      );
+
       setForm({
         name: activeBusiness.name ?? "",
         description: activeBusiness.description ?? "",
@@ -329,8 +573,10 @@ function EditModal({ business, onClose, onSave, isSaving }) {
         other_social_link: activeBusiness.other_social_link ?? "",
         serving_areas: activeBusiness.serving_areas ?? "",
         services_tags: activeBusiness.services_tags ?? "",
+        occasions: activeBusiness.occasions ?? "",
         website: activeBusiness.website ?? "",
         promo_video_link: activeBusiness.promo_video_link ?? "",
+        categories: initialCatIds,
       });
     }
   }, [activeBusiness]);
@@ -341,6 +587,7 @@ function EditModal({ business, onClose, onSave, isSaving }) {
     setForm((f) => ({ ...f, [key]: e.target.value }));
 
   const flyerUrl = getFlyerUrl(activeBusiness.flyer_image);
+  const bannerUrl = getFlyerUrl(activeBusiness.banner);
   const categories = business.categories?.map((c) => c.name).join(", ") || "—";
   const planLabel = business.plan
     ? `${business.plan.tier} · $${business.plan.final_price}`
@@ -349,37 +596,128 @@ function EditModal({ business, onClose, onSave, isSaving }) {
   const detailCategories = getCategoryNames(activeBusiness.categories);
   const detailPlanLabel = getPlanLabel(activeBusiness);
 
+  const handleAddGallery = (newFiles) => {
+    setGalleryWarning("");
+    if (planMeta.maxPhotos === 0) {
+      setGalleryWarning(
+        `${planMeta.name} plan does not include a photo gallery. Upgrade plan to add gallery photos.`
+      );
+      return;
+    }
+    const currentCount = (activeBusiness.photos?.length || 0) + galleryFiles.length;
+    const remaining = planMeta.maxPhotos - currentCount;
+    if (remaining <= 0) {
+      setGalleryWarning(
+        `Reached the ${planMeta.maxPhotos}-photo limit for ${planMeta.name}.`
+      );
+      return;
+    }
+    const toAdd = newFiles.slice(0, remaining);
+    setGalleryFiles((prev) => [...prev, ...toAdd]);
+    if (newFiles.length > remaining) {
+      setGalleryWarning(
+        `Only ${remaining} more photo${remaining !== 1 ? "s" : ""} allowed for ${planMeta.name}. Extra files were skipped.`
+      );
+    }
+  };
+
+  const handleRemoveGallery = (idx) => {
+    setGalleryFiles((prev) => prev.filter((_, i) => i !== idx));
+    setGalleryWarning("");
+  };
+
   const handleSubmit = async () => {
-    setFlyerUploadError("");
-    const payload = { id: activeBusiness.id, ...form };
+    setUploadError("");
+
+    if (descOverLimit) {
+      setUploadError(
+        `Description exceeds the ${planMeta.maxDescChars}-character limit for ${planMeta.name}. Please shorten it.`
+      );
+      return;
+    }
+
+    setUploadingMedia(true);
 
     try {
+      const matchedCommunity = communities.find(
+        (c) => c.name === form.city || c.id === form.city
+      );
+
+      const payload = {
+        id: activeBusiness.id,
+        ...form,
+        ...(matchedCommunity ? { community_id: matchedCommunity.id } : {}),
+      };
+
+      // Upload Flyer
       if (flyerFiles.length > 0) {
         const formData = new FormData();
         formData.append("image", flyerFiles[0]);
         const uploadResponse = await uploadMedia(formData).unwrap();
         const flyerImageId = getUploadedMediaId(uploadResponse);
-
         if (flyerImageId) {
           payload.flyer_image = flyerImageId;
         }
       }
 
+      // Upload Banner
+      if (bannerFiles.length > 0) {
+        const formData = new FormData();
+        formData.append("image", bannerFiles[0]);
+        const uploadResponse = await uploadMedia(formData).unwrap();
+        const bannerImageId = getUploadedMediaId(uploadResponse);
+        if (bannerImageId) {
+          payload.banner = bannerImageId;
+        }
+      }
+
+      // Upload Gallery Photos
+      if (galleryFiles.length > 0 && planMeta.maxPhotos > 0) {
+        const photoIds = [];
+        for (const file of galleryFiles) {
+          const formData = new FormData();
+          formData.append("image", file);
+          const uploadResponse = await uploadMedia(formData).unwrap();
+          const pId = getUploadedMediaId(uploadResponse);
+          if (pId) photoIds.push(pId);
+        }
+        if (photoIds.length > 0) {
+          payload.photo_ids = photoIds;
+        }
+      }
+
+      setUploadingMedia(false);
       await onSave(payload);
     } catch (err) {
-      console.error("Failed to upload flyer:", err);
-      setFlyerUploadError("Failed to upload flyer. Please try again.");
+      setUploadingMedia(false);
+      console.error("Failed to upload media or save business:", err);
+      setUploadError("Failed to upload images or save business. Please try again.");
     }
   };
 
+  const rightFields = [
+    FIELD_INPUT("Contact Name", "contact_name"),
+    FIELD_INPUT("Contact Email", "contact_email", "email"),
+    FIELD_INPUT("Contact Phone", "contact_phone"),
+    FIELD_INPUT("Instagram", "instagram"),
+    FIELD_INPUT("Facebook", "facebook"),
+    FIELD_INPUT("Uber Eats Link", "other_social_link"),
+    FIELD_INPUT("Website", "website", "url"),
+    ...(planTier === "premium"
+      ? [FIELD_INPUT("Promo Video URL", "promo_video_link", "url")]
+      : []),
+    FIELD_INPUT("Occasions", "occasions"),
+    FIELD_INPUT("Services / Tags", "services_tags"),
+  ];
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 backdrop-blur-[2px] p-4">
-      <div className="relative w-full max-w-3xl rounded-2xl bg-white shadow-xl max-h-[90vh] overflow-y-auto">
+      <div className="relative w-full max-w-4xl rounded-2xl bg-white shadow-xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-stone-100">
           <div>
             <h2 className="text-base font-bold text-stone-900">
-              Edit Business
+              Edit Business Details
             </h2>
             <p className="text-xs text-stone-500 mt-0.5">
               ID #{activeBusiness.id} ·{" "}
@@ -403,98 +741,202 @@ function EditModal({ business, onClose, onSave, isSaving }) {
         )}
 
         <div className="px-6 py-5 space-y-6">
-          {/* Top row: flyer + meta */}
-          <div className="flex gap-5">
-            <div className="w-44 shrink-0 space-y-3">
+          {/* Top row: Status, Plan (read-only), Owner, Featured */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-stone-50/60 p-4 rounded-xl border border-stone-100">
+            {/* Status */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-stone-500">
+                Status
+              </label>
+              <select
+                value={form.status}
+                onChange={update("status")}
+                className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm text-stone-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 bg-white"
+              >
+                {STATUS_OPTIONS.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Plan (read-only) */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-stone-500">
+                Plan
+              </label>
+              <input
+                readOnly
+                value={detailPlanLabel || planLabel}
+                className="w-full rounded-lg border border-stone-200 bg-stone-100 px-3 py-2 text-sm text-stone-500 outline-none cursor-not-allowed"
+              />
+            </div>
+
+            {/* Owner (read-only) */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-stone-500">
+                Owner
+              </label>
+              <input
+                readOnly
+                value={business.user?.email ?? "—"}
+                className="w-full rounded-lg border border-stone-200 bg-stone-100 px-3 py-2 text-sm text-stone-500 outline-none cursor-not-allowed"
+              />
+            </div>
+
+            {/* Featured */}
+            <div className="flex items-end pb-2.5">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={form.is_featured ?? false}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, is_featured: e.target.checked }))
+                  }
+                  className="accent-emerald-700 w-4 h-4"
+                />
+                <span className="text-sm font-medium text-stone-700">
+                  Featured
+                </span>
+              </label>
+            </div>
+          </div>
+
+          {/* Media Section: Flyer, Banner, Gallery Photos */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 border border-stone-100 p-4 rounded-xl bg-white">
+            {/* Flyer Image */}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-stone-700">Flyer Image</label>
               {flyerUrl ? (
                 <img
                   src={flyerUrl}
-                  alt={activeBusiness.name}
+                  alt="Flyer"
                   className="h-28 w-full rounded-xl object-cover border border-stone-100"
                 />
               ) : (
                 <div className="h-28 w-full rounded-xl bg-stone-100 flex items-center justify-center text-stone-300 text-xs">
-                  No image
+                  No flyer image
                 </div>
               )}
               <UploadBox
-                label="Click to upload your flyer (JPG or PNG)"
+                label="Click to upload flyer"
                 files={flyerFiles}
-                onAdd={(newFiles) => {
-                  setFlyerUploadError("");
-                  setFlyerFiles(newFiles.slice(0, 1));
-                }}
-                onRemove={() => {
-                  setFlyerUploadError("");
-                  setFlyerFiles([]);
-                }}
+                onAdd={(files) => setFlyerFiles(files.slice(0, 1))}
+                onRemove={() => setFlyerFiles([])}
               />
-              {flyerUploadError && (
-                <p className="text-xs text-red-500">{flyerUploadError}</p>
+            </div>
+
+            {/* Banner Image */}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-stone-700">Banner Image</label>
+              {bannerUrl ? (
+                <img
+                  src={bannerUrl}
+                  alt="Banner"
+                  className="h-28 w-full rounded-xl object-cover border border-stone-100"
+                />
+              ) : (
+                <div className="h-28 w-full rounded-xl bg-stone-100 flex items-center justify-center text-stone-300 text-xs">
+                  No banner image
+                </div>
+              )}
+              <UploadBox
+                label="Click to upload banner"
+                files={bannerFiles}
+                onAdd={(files) => setBannerFiles(files.slice(0, 1))}
+                onRemove={() => setBannerFiles([])}
+              />
+            </div>
+
+            {/* Photo Gallery */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-stone-700">
+                  Photo Gallery
+                </label>
+                <span className="text-[11px] text-stone-400">
+                  ({(activeBusiness.photos?.length || 0) + galleryFiles.length} / {planMeta.maxPhotos})
+                </span>
+              </div>
+              <div className="flex gap-1.5 overflow-x-auto pb-1 max-h-28">
+                {activeBusiness.photos && activeBusiness.photos.length > 0 ? (
+                  activeBusiness.photos.map((p, idx) => (
+                    <img
+                      key={idx}
+                      src={getFlyerUrl(p)}
+                      alt="Gallery"
+                      className="h-28 w-20 rounded-xl object-cover border border-stone-100 shrink-0"
+                    />
+                  ))
+                ) : (
+                  <div className="h-28 w-full rounded-xl bg-stone-100 flex items-center justify-center text-stone-300 text-xs">
+                    No gallery photos
+                  </div>
+                )}
+              </div>
+
+              {planMeta.maxPhotos > 0 ? (
+                <UploadBox
+                  label={`Upload gallery (up to ${planMeta.maxPhotos})`}
+                  multiple
+                  files={galleryFiles}
+                  onAdd={handleAddGallery}
+                  onRemove={handleRemoveGallery}
+                  warning={galleryWarning}
+                />
+              ) : (
+                <div className="rounded-xl bg-stone-50 border border-stone-200 py-3 px-3 text-center text-xs text-stone-400">
+                  Photo gallery not included in {planMeta.name}
+                </div>
               )}
             </div>
-            <div className="flex-1 grid grid-cols-2 gap-4">
-              {/* Status */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-stone-500">
-                  Status
-                </label>
-                <select
-                  value={form.status}
-                  onChange={update("status")}
-                  className="w-full rounded-lg border border-stone-200 px-3 py-2.5 text-sm text-stone-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 bg-white"
-                >
-                  {STATUS_OPTIONS.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {/* Plan (read-only) */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-stone-500">
-                  Plan
-                </label>
-                <input
-                  readOnly
-                  value={detailPlanLabel || planLabel}
-                  className="w-full rounded-lg border border-stone-100 bg-stone-50 px-3 py-2.5 text-sm text-stone-500 outline-none cursor-not-allowed"
-                />
-              </div>
-              {/* User (read-only) */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-stone-500">
-                  Owner
-                </label>
-                <input
-                  readOnly
-                  value={business.user?.email ?? "—"}
-                  className="w-full rounded-lg border border-stone-100 bg-stone-50 px-3 py-2.5 text-sm text-stone-500 outline-none cursor-not-allowed"
-                />
-              </div>
-              {/* Featured */}
-              <div className="flex items-end pb-1">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={form.is_featured}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, is_featured: e.target.checked }))
-                    }
-                    className="accent-emerald-700 w-4 h-4"
-                  />
-                  <span className="text-sm font-medium text-stone-700">
-                    Featured
-                  </span>
-                </label>
-              </div>
+          </div>
+
+          {/* Categories Selector */}
+          <CategoriesSelector
+            selectedCatIds={form.categories || []}
+            onChange={(cats) => setForm((f) => ({ ...f, categories: cats }))}
+            categoriesData={categoriesData}
+            isLoading={categoriesLoading}
+          />
+
+          {/* Description */}
+          <div className="space-y-1.5">
+            <div className="flex justify-between items-center">
+              <label className="text-xs font-medium text-stone-500">
+                Description
+              </label>
+              <span
+                className={`text-[11px] font-medium ${
+                  descOverLimit ? "text-red-500" : "text-stone-400"
+                }`}
+              >
+                {descLength} / {planMeta.maxDescChars}
+              </span>
             </div>
+            <textarea
+              rows={3}
+              value={form.description ?? ""}
+              onChange={update("description")}
+              placeholder="What do you offer? Who is it for?"
+              className={`w-full rounded-lg border ${
+                descOverLimit ? "border-red-400 focus:border-red-500 focus:ring-red-500" : "border-stone-200 focus:border-emerald-600 focus:ring-emerald-600"
+              } p-3 text-sm text-stone-800 outline-none focus:ring-1 transition`}
+            />
+            {descOverLimit && (
+              <div className="flex items-center gap-1.5 text-red-500 text-xs mt-1">
+                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>
+                  {planMeta.name} allows up to {planMeta.maxDescChars} characters. Please shorten your description.
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Two-column field grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {FIELDS_LEFT.slice(0, 2).map(({ label, key, type }) => (
+            {FIELDS_LEFT.slice(0, 1).map(({ label, key, type }) => (
               <Field
                 key={key}
                 label={label}
@@ -503,13 +945,15 @@ function EditModal({ business, onClose, onSave, isSaving }) {
                 type={type}
               />
             ))}
+
             <CityField
               value={form.city}
               onChange={update("city")}
               communities={communities}
               isLoading={communitiesLoading}
             />
-            {FIELDS_LEFT.slice(2).map(({ label, key, type }) => (
+
+            {FIELDS_LEFT.slice(1).map(({ label, key, type }) => (
               <Field
                 key={key}
                 label={label}
@@ -518,7 +962,13 @@ function EditModal({ business, onClose, onSave, isSaving }) {
                 type={type}
               />
             ))}
-            {FIELDS_RIGHT.map(({ label, key, type }) => (
+
+            <BusinessHoursField
+              value={form.business_hours}
+              onChange={update("business_hours")}
+            />
+
+            {rightFields.map(({ label, key, type }) => (
               <Field
                 key={key}
                 label={label}
@@ -528,6 +978,13 @@ function EditModal({ business, onClose, onSave, isSaving }) {
               />
             ))}
           </div>
+
+          {uploadError && (
+            <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-100 p-3 text-xs text-red-600">
+              <AlertCircle size={14} />
+              {uploadError}
+            </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -540,10 +997,10 @@ function EditModal({ business, onClose, onSave, isSaving }) {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={isSaving || isUploadingFlyer}
+            disabled={isSaving || uploadingMedia || descOverLimit}
             className="flex-1 rounded-lg bg-emerald-800 py-2.5 text-sm font-medium text-white hover:bg-emerald-900 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
           >
-            {(isSaving || isUploadingFlyer) && (
+            {(isSaving || uploadingMedia) && (
               <Loader2 size={14} className="animate-spin" />
             )}
             Save Changes

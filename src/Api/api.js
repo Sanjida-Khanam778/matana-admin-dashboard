@@ -29,6 +29,7 @@ export const api = createApi({
     "map-community",
     "profile",
     "messages",
+    "plans",
   ],
   endpoints: () => ({}),
 });

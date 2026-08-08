@@ -10,6 +10,7 @@ import AllBusinessListing from "../components/Allbusinesslisting/Allbusinesslist
 import Pricing from "../components/Pricing/Pricing";
 import Message from "../components/Message/Message";
 import Communities from "../components/Communities/Communities";
+import Plans from "../components/Plans/Plans";
 
 export const router = createBrowserRouter([
   {
@@ -48,6 +49,10 @@ export const router = createBrowserRouter([
       {
         path: "/pricing",
         element: <Pricing />,
+      },
+      {
+        path: "/plans",
+        element: <Plans />,
       },
       {
         path: "/message",

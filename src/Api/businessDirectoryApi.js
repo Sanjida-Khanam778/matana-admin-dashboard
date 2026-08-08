@@ -4,6 +4,15 @@ export const businessDirectoryApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getPlans: builder.query({
       query: () => "/plans/",
+      providesTags: ["plans"],
+    }),
+    updatePlan: builder.mutation({
+      query: ({ id, tier, base_price }) => ({
+        url: `/plans/${id}/`,
+        method: "PATCH",
+        body: { tier, base_price },
+      }),
+      invalidatesTags: ["plans"],
     }),
     getCategories: builder.query({
       query: () => "/categories/",
@@ -75,4 +84,5 @@ export const {
   useFilterBusinessesQuery,
   useUploadMediaMutation,
   useRegisterBusinessMutation,
+  useUpdatePlanMutation,
 } = businessDirectoryApi;
