@@ -48,6 +48,8 @@ export default function BusinessDetailsFields({
   setPromoVideoLink,
   flyerFiles,
   setFlyerFiles,
+  bannerFiles,
+  setBannerFiles,
   submitError,
   handleSubmit,
   submitting,
@@ -361,6 +363,18 @@ export default function BusinessDetailsFields({
           files={flyerFiles}
           onAdd={(newFiles) => setFlyerFiles(newFiles.slice(0, 1))}
           onRemove={() => setFlyerFiles([])}
+        />
+      </div>
+
+      <div>
+        <label className="block text-[13px] font-semibold mb-1.5">
+          Banner image
+        </label>
+        <UploadBox
+          label="Click to upload your banner (JPG or PNG)"
+          files={bannerFiles}
+          onAdd={(newFiles) => setBannerFiles(newFiles.slice(0, 1))}
+          onRemove={() => setBannerFiles([])}
         />
       </div>
 

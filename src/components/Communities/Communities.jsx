@@ -446,7 +446,7 @@ export default function Communities() {
 
   return (
     <div
-      className="min-h-screen bg-[#F4F1EA] p-6 sm:p-10"
+      className=" bg-[#F4F1EA] p-6 sm:p-10"
       onClick={() => openMenu && setOpenMenu(null)}
     >
       <div className="mx-auto max-w-4xl">

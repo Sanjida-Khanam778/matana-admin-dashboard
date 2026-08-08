@@ -30,12 +30,6 @@ function AddCategoryModal({ open, onClose }) {
 
   if (!open) return null;
 
-  const toggleOccasion = (o) => {
-    setSelected((prev) =>
-      prev.includes(o) ? prev.filter((x) => x !== o) : [...prev, o]
-    );
-  };
-
   const handleFileChange = async (e) => {
     const selectedFile = e.target.files[0];
     if (!selectedFile) return;
@@ -241,7 +235,7 @@ export default function Categories() {
 
   return (
     <div
-      className="min-h-screen bg-[#F4F1EA] p-6 sm:p-10"
+      className="bg-[#F4F1EA] p-6 sm:p-10"
       onClick={() => openMenu && setOpenMenu(null)}
     >
       <div className="mx-auto max-w-4xl">

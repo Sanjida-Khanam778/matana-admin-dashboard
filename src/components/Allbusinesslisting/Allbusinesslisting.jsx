@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from "react";
 import {
   Search,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Pencil,
   Trash2,
   X,
@@ -18,6 +19,7 @@ import {
   useUploadMediaMutation,
 } from "../../Api/dashboardApi";
 import { useGetCommunitiesQuery } from "../../Api/businessDirectoryApi";
+import { useEffect, useState } from "react";
 
 /* ─── helpers ───*/
 
@@ -560,6 +562,19 @@ function EditModal({ business, onClose, onSave, isSaving }) {
   );
 }
 
+function getPageNumbers(current, total) {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  if (current <= 4) {
+    return [1, 2, 3, 4, 5, "...", total];
+  }
+  if (current >= total - 3) {
+    return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+  }
+  return [1, "...", current - 1, current, current + 1, "...", total];
+}
+
 /* ─── Main Component ─── */
 
 export default function AllBusinessListing() {
@@ -568,6 +583,10 @@ export default function AllBusinessListing() {
   const [statusFilter, setStatusFilter] = useState("All Status");
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const {
     data: businesses = [],
@@ -588,6 +607,17 @@ export default function AllBusinessListing() {
       return false;
     return true;
   });
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [tab, search, statusFilter, itemsPerPage]);
+
+  const totalItems = filtered.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+  const paginatedBusinesses = filtered.slice(startIndex, endIndex);
 
   const handleSave = async (payload) => {
     try {
@@ -665,103 +695,192 @@ export default function AllBusinessListing() {
               <span className="text-sm">Failed to load businesses.</span>
             </div>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs text-stone-400 border-y border-stone-100 bg-stone-50/50">
-                  <th className="px-6 py-3 font-medium">Business</th>
-                  <th className="px-6 py-3 font-medium">Categories</th>
-                  <th className="px-6 py-3 font-medium">City</th>
-                  <th className="px-6 py-3 font-medium">Plan</th>
-                  <th className="px-6 py-3 font-medium">Status</th>
-                  <th className="px-6 py-3 font-medium text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((b, i) => {
-                  const imgUrl = getFlyerUrl(b.flyer_image);
-                  const catNames = getCategoryNames(b.categories);
-                  const planLabel = b.plan?.tier ?? "—";
+            <>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-stone-400 border-y border-stone-100 bg-stone-50/50">
+                    <th className="px-6 py-3 font-medium">Business</th>
+                    <th className="px-6 py-3 font-medium">Categories</th>
+                    <th className="px-6 py-3 font-medium">City</th>
+                    <th className="px-6 py-3 font-medium">Plan</th>
+                    <th className="px-6 py-3 font-medium">Status</th>
+                    <th className="px-6 py-3 font-medium text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedBusinesses.map((b, i) => {
+                    const imgUrl = getFlyerUrl(b.flyer_image);
+                    const catNames = getCategoryNames(b.categories);
+                    const planLabel = b.plan?.tier ?? "—";
 
-                  return (
-                    <tr
-                      key={b.id}
-                      className={
-                        i !== filtered.length - 1
-                          ? "border-b border-stone-100"
-                          : ""
-                      }
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          {imgUrl ? (
-                            <img
-                              src={imgUrl}
-                              alt={b.name}
-                              className="h-9 w-9 rounded-lg object-cover shrink-0"
-                            />
-                          ) : (
-                            <div className="h-9 w-9 rounded-lg bg-stone-100 shrink-0" />
-                          )}
-                          <div>
-                            <p className="font-medium text-stone-900 flex items-center gap-1.5">
-                              {b.name}
-                              {b.is_featured && (
-                                <span className="rounded-full bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0.5 font-semibold">
-                                  Featured
-                                </span>
-                              )}
-                            </p>
-                            <p className="text-xs text-stone-400">
-                              {b.contact_email}
-                            </p>
+                    return (
+                      <tr
+                        key={b.id}
+                        className={
+                          i !== paginatedBusinesses.length - 1
+                            ? "border-b border-stone-100"
+                            : ""
+                        }
+                      >
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            {imgUrl ? (
+                              <img
+                                src={imgUrl}
+                                alt={b.name}
+                                className="h-9 w-9 rounded-lg object-cover shrink-0"
+                              />
+                            ) : (
+                              <div className="h-9 w-9 rounded-lg bg-stone-100 shrink-0" />
+                            )}
+                            <div>
+                              <p className="font-medium text-stone-900 flex items-center gap-1.5">
+                                {b.name}
+                                {b.is_featured && (
+                                  <span className="rounded-full bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0.5 font-semibold">
+                                    Featured
+                                  </span>
+                                )}
+                              </p>
+                              <p className="text-xs text-stone-400">
+                                {b.contact_email}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-stone-500 max-w-[180px] truncate">
-                        {catNames}
-                      </td>
-                      <td className="px-6 py-4 text-stone-500">
-                        {getCommunityName(b) || "—"}
-                      </td>
-                      <td className="px-6 py-4 text-stone-500 capitalize">
-                        {planLabel}
-                      </td>
-                      <td className="px-6 py-4">
-                        <StatusPill status={b.status} />
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-3">
-                          <button
-                            onClick={() => setEditing(b)}
-                            className="text-emerald-700 hover:text-emerald-900 transition-colors"
-                            title="Edit business"
-                          >
-                            <Pencil size={15} />
-                          </button>
-                          <button
-                            onClick={() => setDeleting(b)}
-                            className="text-red-500 hover:text-red-700 transition-colors"
-                            title="Delete business"
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
+                        </td>
+                        <td className="px-6 py-4 text-stone-500 max-w-[180px] truncate">
+                          {catNames}
+                        </td>
+                        <td className="px-6 py-4 text-stone-500">
+                          {getCommunityName(b) || "—"}
+                        </td>
+                        <td className="px-6 py-4 text-stone-500 capitalize">
+                          {planLabel}
+                        </td>
+                        <td className="px-6 py-4">
+                          <StatusPill status={b.status} />
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-end gap-3">
+                            <button
+                              onClick={() => setEditing(b)}
+                              className="text-emerald-700 hover:text-emerald-900 transition-colors"
+                              title="Edit business"
+                            >
+                              <Pencil size={15} />
+                            </button>
+                            <button
+                              onClick={() => setDeleting(b)}
+                              className="text-red-500 hover:text-red-700 transition-colors"
+                              title="Delete business"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {filtered.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="px-6 py-10 text-center text-stone-400"
+                      >
+                        No businesses match your filters.
                       </td>
                     </tr>
-                  );
-                })}
-                {filtered.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="px-6 py-10 text-center text-stone-400"
-                    >
-                      No businesses match your filters.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  )}
+                </tbody>
+              </table>
+
+              {/* Pagination Footer */}
+              {totalItems > 0 && (
+                <div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-stone-100 bg-stone-50/50">
+                  <div className="flex items-center gap-4 text-xs text-stone-500">
+                    <span>
+                      Showing{" "}
+                      <strong className="font-semibold text-stone-800">
+                        {startIndex + 1}
+                      </strong>{" "}
+                      to{" "}
+                      <strong className="font-semibold text-stone-800">
+                        {endIndex}
+                      </strong>{" "}
+                      of{" "}
+                      <strong className="font-semibold text-stone-800">
+                        {totalItems}
+                      </strong>{" "}
+                      entries
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <label htmlFor="itemsPerPageSelect" className="text-stone-400">
+                        Per page:
+                      </label>
+                      <select
+                        id="itemsPerPageSelect"
+                        value={itemsPerPage}
+                        onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                        className="rounded-lg border border-stone-200 bg-white px-2 py-1 text-xs text-stone-700 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+                      >
+                        {[5, 10, 20, 50, 100].map((num) => (
+                          <option key={num} value={num}>
+                            {num}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {totalPages > 1 && (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="inline-flex items-center justify-center rounded-lg border border-stone-200 bg-white p-2 text-stone-600 hover:bg-stone-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        title="Previous page"
+                      >
+                        <ChevronLeft size={16} />
+                      </button>
+
+                      {getPageNumbers(currentPage, totalPages).map((p, idx) =>
+                        typeof p === "number" ? (
+                          <button
+                            key={p}
+                            onClick={() => setCurrentPage(p)}
+                            className={`min-w-[32px] h-8 px-2 rounded-lg text-xs font-medium transition-colors ${
+                              currentPage === p
+                                ? "bg-emerald-800 text-white shadow-sm"
+                                : "border border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        ) : (
+                          <span
+                            key={`ellipsis-${idx}`}
+                            className="px-1 text-xs text-stone-400 select-none"
+                          >
+                            {p}
+                          </span>
+                        )
+                      )}
+
+                      <button
+                        onClick={() =>
+                          setCurrentPage((p) => Math.min(totalPages, p + 1))
+                        }
+                        disabled={currentPage === totalPages}
+                        className="inline-flex items-center justify-center rounded-lg border border-stone-200 bg-white p-2 text-stone-600 hover:bg-stone-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        title="Next page"
+                      >
+                        <ChevronRight size={16} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

@@ -1,5 +1,5 @@
-﻿import { useState } from "react";
-import { X, Loader2, AlertCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { X, Loader2, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import toast from "react-hot-toast";
 import {
   useGetBusinessesListQuery,
@@ -13,6 +13,19 @@ function mediaUrl(path) {
   if (!path) return null;
   if (path.startsWith("http")) return path;
   return `${BASE_URL}${path}`;
+}
+
+function getPageNumbers(current, total) {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  if (current <= 4) {
+    return [1, 2, 3, 4, 5, "...", total];
+  }
+  if (current >= total - 3) {
+    return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+  }
+  return [1, "...", current - 1, current, current + 1, "...", total];
 }
 
 function StatusBadge({ status }) {
@@ -271,7 +284,22 @@ export default function RequestsPanel() {
   const [tab, setTab] = useState("new");
   const [selectedBusiness, setSelectedBusiness] = useState(null);
 
-  const { data: businesses, isLoading, isError, error } = useGetBusinessesListQuery();
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(6);
+
+  const { data: businesses = [], isLoading, isError, error } = useGetBusinessesListQuery();
+
+  // Reset to page 1 whenever tab or itemsPerPage changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [tab, itemsPerPage]);
+
+  const totalItems = businesses?.length || 0;
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+  const paginatedBusinesses = businesses.slice(startIndex, endIndex);
 
   return (
     <div className="bg-[#F4F1EA] p-6 sm:p-10">
@@ -282,29 +310,6 @@ export default function RequestsPanel() {
             Review and approve business submissions and updates
           </p>
         </div>
-
-        {/* <div className="flex gap-3 mb-6">
-          <button
-            onClick={() => setTab("new")}
-            className={`rounded-full px-4 py-2 text-xs font-medium border transition-colors ${
-              tab === "new"
-                ? "bg-emerald-50 border-emerald-300 text-emerald-800"
-                : "bg-white border-stone-200 text-stone-500"
-            }`}
-          >
-            New Listing {businesses ? `(${businesses.length})` : ""}
-          </button>
-          <button
-            onClick={() => setTab("updated")}
-            className={`rounded-full px-4 py-2 text-xs font-medium border transition-colors ${
-              tab === "updated"
-                ? "bg-emerald-50 border-emerald-300 text-emerald-800"
-                : "bg-white border-stone-200 text-stone-500"
-            }`}
-          >
-            Updated Request (2)
-          </button>
-        </div> */}
 
         {tab === "new" ? (
           <>
@@ -322,21 +327,108 @@ export default function RequestsPanel() {
               </div>
             )}
 
-            {!isLoading && !isError && businesses?.length === 0 && (
+            {!isLoading && !isError && totalItems === 0 && (
               <div className="rounded-2xl bg-white border border-stone-100 shadow-sm p-10 text-center text-sm text-stone-400">
                 No new listing requests to show right now.
               </div>
             )}
 
-            {!isLoading && !isError && businesses?.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {businesses.map((business) => (
-                  <ListingCard
-                    key={business.id}
-                    business={business}
-                    onReview={(b) => setSelectedBusiness(b)}
-                  />
-                ))}
+            {!isLoading && !isError && totalItems > 0 && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {paginatedBusinesses.map((business) => (
+                    <ListingCard
+                      key={business.id}
+                      business={business}
+                      onReview={(b) => setSelectedBusiness(b)}
+                    />
+                  ))}
+                </div>
+
+                {/* Pagination Footer */}
+                <div className="rounded-2xl bg-white border border-stone-100 shadow-sm px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-4 text-xs text-stone-500">
+                    <span>
+                      Showing{" "}
+                      <strong className="font-semibold text-stone-800">
+                        {startIndex + 1}
+                      </strong>{" "}
+                      to{" "}
+                      <strong className="font-semibold text-stone-800">
+                        {endIndex}
+                      </strong>{" "}
+                      of{" "}
+                      <strong className="font-semibold text-stone-800">
+                        {totalItems}
+                      </strong>{" "}
+                      requests
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <label htmlFor="requestItemsPerPage" className="text-stone-400">
+                        Per page:
+                      </label>
+                      <select
+                        id="requestItemsPerPage"
+                        value={itemsPerPage}
+                        onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                        className="rounded-lg border border-stone-200 bg-white px-2 py-1 text-xs text-stone-700 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+                      >
+                        {[6, 9, 12, 24, 48].map((num) => (
+                          <option key={num} value={num}>
+                            {num}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {totalPages > 1 && (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="inline-flex items-center justify-center rounded-lg border border-stone-200 bg-white p-2 text-stone-600 hover:bg-stone-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        title="Previous page"
+                      >
+                        <ChevronLeft size={16} />
+                      </button>
+
+                      {getPageNumbers(currentPage, totalPages).map((p, idx) =>
+                        typeof p === "number" ? (
+                          <button
+                            key={p}
+                            onClick={() => setCurrentPage(p)}
+                            className={`min-w-[32px] h-8 px-2 rounded-lg text-xs font-medium transition-colors ${
+                              currentPage === p
+                                ? "bg-emerald-800 text-white shadow-sm"
+                                : "border border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        ) : (
+                          <span
+                            key={`ellipsis-${idx}`}
+                            className="px-1 text-xs text-stone-400 select-none"
+                          >
+                            {p}
+                          </span>
+                        )
+                      )}
+
+                      <button
+                        onClick={() =>
+                          setCurrentPage((p) => Math.min(totalPages, p + 1))
+                        }
+                        disabled={currentPage === totalPages}
+                        className="inline-flex items-center justify-center rounded-lg border border-stone-200 bg-white p-2 text-stone-600 hover:bg-stone-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        title="Next page"
+                      >
+                        <ChevronRight size={16} />
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </>

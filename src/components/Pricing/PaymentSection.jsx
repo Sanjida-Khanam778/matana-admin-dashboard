@@ -123,7 +123,13 @@ export default function PaymentSection({
       </div>
 
       {/* ── Card Details (Cardknox iFields — real iframes) ── */}
-      <div className="bg-gray-50 border border-gray rounded-2xl p-5 space-y-4">
+      <form
+        autoComplete="off"
+        onSubmit={(e) => e.preventDefault()}
+        data-lpignore="true"
+        data-form-type="other"
+        className="bg-gray-50 border border-gray rounded-2xl p-5 space-y-4"
+      >
         <div className="flex items-center gap-2 mb-1">
           <CreditCard className="w-4 h-4 text-gray-600" />
           <p className="text-[13px] font-bold text-gray-800">Card Details</p>
@@ -138,7 +144,7 @@ export default function PaymentSection({
               data-ifields-id="card-number"
               data-ifields-placeholder="1234 5678 9012 3456"
               src="https://cdn.cardknox.com/ifields/2.15.2401.3101/ifield.htm"
-              title="Card Number"
+              title="Secure Card Field"
               className="w-full h-full border-0 block"
               style={{ width: "100%", height: "100%", border: "none" }}
             />
@@ -148,7 +154,7 @@ export default function PaymentSection({
             ref={cardNumTokenRef}
             data-ifields-id="card-number-token"
             type="hidden"
-            autoComplete="off"
+            autoComplete="new-password"
           />
         </div>
 
@@ -162,7 +168,7 @@ export default function PaymentSection({
                 data-ifields-id="cvv"
                 data-ifields-placeholder="123"
                 src="https://cdn.cardknox.com/ifields/2.15.2401.3101/ifield.htm"
-                title="CVV"
+                title="Secure Security Code Field"
                 className="w-full h-full border-0 block"
                 style={{ width: "100%", height: "100%", border: "none" }}
               />
@@ -172,7 +178,7 @@ export default function PaymentSection({
               ref={cvvTokenRef}
               data-ifields-id="cvv-token"
               type="hidden"
-              autoComplete="off"
+              autoComplete="new-password"
             />
           </div>
           <div>
@@ -185,7 +191,7 @@ export default function PaymentSection({
               maxLength={7}
               value={cardExpiry}
               onChange={handleExpiryChange}
-              autoComplete="off"
+              autoComplete="new-password"
               className={inputCls}
             />
           </div>
@@ -203,7 +209,7 @@ export default function PaymentSection({
             <Check className="w-3.5 h-3.5" /> Card verified securely
           </div>
         )}
-      </div>
+      </form>
     </>
   );
 }
