@@ -116,6 +116,7 @@ export default function Pricing() {
   const [facebook, setFacebook] = useState("");
   const [otherSocialLink, setOtherSocialLink] = useState("");
   const [servicesTags, setServicesTags] = useState("");
+  const [occasions, setOccasions] = useState("");
   const [website, setWebsite] = useState("");
 
   // ── Card fields ──
@@ -344,6 +345,7 @@ export default function Pricing() {
       instagram, facebook,
       other_social_link: otherSocialLink,
       services_tags: servicesTags,
+      occasions,
       website,
       plan_id: selectedPlanApi?.id,
       payment_type: paymentType,
@@ -465,6 +467,8 @@ export default function Pricing() {
             setOtherSocialLink={setOtherSocialLink}
             servicesTags={servicesTags}
             setServicesTags={setServicesTags}
+            occasions={occasions}
+            setOccasions={setOccasions}
             website={website}
             setWebsite={setWebsite}
             plan={plan}

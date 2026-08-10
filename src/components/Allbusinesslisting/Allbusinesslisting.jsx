@@ -10,6 +10,9 @@ import {
   AlertCircle,
   AlertTriangle,
   Upload,
+  Mail,
+  Send,
+  ExternalLink,
 } from "lucide-react";
 import {
   useGetBusinessesListQuery,
@@ -512,6 +515,139 @@ function CategoriesSelector({ selectedCatIds = [], onChange, categoriesData = []
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+function BulkEmailModal({ isOpen, onClose, recipients = [] }) {
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+
+  if (!isOpen) return null;
+
+  const emailString = recipients.join(",");
+
+  const handleOpenGmail = () => {
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(
+      emailString
+    )}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(gmailUrl, "_blank");
+  };
+
+  const handleOpenDefaultMail = () => {
+    const mailtoUrl = `mailto:${emailString}?subject=${encodeURIComponent(
+      subject
+    )}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoUrl;
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 backdrop-blur-[2px] p-4">
+      <div className="relative w-full max-w-2xl rounded-2xl bg-white shadow-xl overflow-hidden font-inter">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-stone-100">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-emerald-100/80 flex items-center justify-center text-emerald-800">
+              <Mail size={18} />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-stone-900">
+                Email All Businesses
+              </h2>
+              <p className="text-xs text-stone-500">
+                {recipients.length} business recipient{recipients.length !== 1 ? "s" : ""} pre-filled in To field
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-stone-400 hover:text-stone-600 transition-colors p-1"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Form Body */}
+        <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+          {/* To Field */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-semibold text-stone-700">
+                To (Recipients)
+              </label>
+              <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                {recipients.length} Email{recipients.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+            <div className="w-full rounded-xl border border-stone-200 bg-stone-50/80 p-3 text-xs text-stone-700 max-h-24 overflow-y-auto break-all font-mono leading-relaxed">
+              {recipients.length > 0 ? (
+                emailString
+              ) : (
+                <span className="text-stone-400 italic font-sans">
+                  No valid business email addresses found.
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Subject Field */}
+          <div>
+            <label className="text-xs font-semibold text-stone-700 mb-1 block">
+              Subject
+            </label>
+            <input
+              type="text"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              placeholder="Enter email subject..."
+              className="w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm text-stone-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+            />
+          </div>
+
+          {/* Message Body Field */}
+          <div>
+            <label className="text-xs font-semibold text-stone-700 mb-1 block">
+              Mail Body / Message
+            </label>
+            <textarea
+              rows={6}
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              placeholder="Type your email message body here..."
+              className="w-full rounded-xl border border-stone-200 p-3.5 text-sm text-stone-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+            />
+          </div>
+        </div>
+
+        {/* Footer Action Buttons */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-6 py-4 border-t border-stone-100 bg-stone-50/50">
+          <button
+            onClick={onClose}
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-stone-200 text-xs font-semibold text-stone-600 hover:bg-stone-100 transition"
+          >
+            Cancel
+          </button>
+
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <button
+              onClick={handleOpenDefaultMail}
+              disabled={recipients.length === 0}
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-emerald-800 text-emerald-800 text-xs font-semibold hover:bg-emerald-50 transition disabled:opacity-50"
+            >
+              <Send size={14} />
+              Default Email App
+            </button>
+            {/* <button
+              onClick={handleOpenGmail}
+              disabled={recipients.length === 0}
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-semibold transition disabled:opacity-50 shadow-sm"
+            >
+              <ExternalLink size={14} />
+              Open in Gmail
+            </button> */}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1040,6 +1176,7 @@ export default function AllBusinessListing() {
   const [statusFilter, setStatusFilter] = useState("All Status");
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -1064,6 +1201,15 @@ export default function AllBusinessListing() {
       return false;
     return true;
   });
+
+  // Extract all unique valid recipient emails from filtered list
+  const allBusinessEmails = Array.from(
+    new Set(
+      filtered
+        .map((b) => b.contact_email)
+        .filter((email) => email && typeof email === "string" && email.trim() !== "")
+    )
+  );
 
   // Reset to page 1 whenever filters change
   useEffect(() => {
@@ -1095,11 +1241,22 @@ export default function AllBusinessListing() {
   };
 
   return (
-    <div className="bg-[#F4F1EA] p-6 sm:p-10">
+    <div className="bg-[#F4F1EA] p-6 sm:p-10 h-screen overflow-hidden">
       <div className="mx-auto max-w-6xl">
-        <h1 className="text-xl font-bold text-stone-900 mb-4">
-          All Business Listing
-        </h1>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
+          <h1 className="text-xl font-bold text-stone-900">
+            All Business Listing
+          </h1>
+
+          <button
+            onClick={() => setIsEmailModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-semibold transition shadow-sm"
+            title="Email all listed businesses"
+          >
+            <Mail size={16} />
+            Email All Businesses ({allBusinessEmails.length})
+          </button>
+        </div>
 
         <div className="rounded-2xl bg-white border border-stone-100 shadow-sm overflow-hidden">
           {/* Tabs */}
@@ -1354,6 +1511,12 @@ export default function AllBusinessListing() {
         onConfirm={handleDelete}
         onCancel={() => setDeleting(null)}
         isLoading={isDeleting}
+      />
+
+      <BulkEmailModal
+        isOpen={isEmailModalOpen}
+        onClose={() => setIsEmailModalOpen(false)}
+        recipients={allBusinessEmails}
       />
     </div>
   );

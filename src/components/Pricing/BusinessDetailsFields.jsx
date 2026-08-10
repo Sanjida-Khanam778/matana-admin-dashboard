@@ -2,6 +2,187 @@ import { useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import UploadBox from "./UploadBox";
 
+const DAYS_LIST = [
+  { label: "Monday", short: "Mon" },
+  { label: "Tuesday", short: "Tue" },
+  { label: "Wednesday", short: "Wed" },
+  { label: "Thursday", short: "Thu" },
+  { label: "Friday", short: "Fri" },
+  { label: "Saturday", short: "Sat" },
+  { label: "Sunday", short: "Sun" },
+];
+
+const TIME_OPTIONS = [
+  "6:00 AM",
+  "6:30 AM",
+  "7:00 AM",
+  "7:30 AM",
+  "8:00 AM",
+  "8:30 AM",
+  "9:00 AM",
+  "9:30 AM",
+  "10:00 AM",
+  "10:30 AM",
+  "11:00 AM",
+  "11:30 AM",
+  "12:00 PM",
+  "12:30 PM",
+  "1:00 PM",
+  "1:30 PM",
+  "2:00 PM",
+  "2:30 PM",
+  "3:00 PM",
+  "3:30 PM",
+  "4:00 PM",
+  "4:30 PM",
+  "5:00 PM",
+  "5:30 PM",
+  "6:00 PM",
+  "6:30 PM",
+  "7:00 PM",
+  "7:30 PM",
+  "8:00 PM",
+  "8:30 PM",
+  "9:00 PM",
+  "9:30 PM",
+  "10:00 PM",
+  "10:30 PM",
+  "11:00 PM",
+  "11:30 PM",
+  "12:00 AM",
+  "Closed",
+  "Open 24 Hours",
+];
+
+function BusinessHoursField({ value, onChange }) {
+  const [startDay, setStartDay] = useState("Monday");
+  const [endDay, setEndDay] = useState("Friday");
+  const [openTime, setOpenTime] = useState("9:00 AM");
+  const [closeTime, setCloseTime] = useState("6:00 PM");
+
+  const getShortDay = (dayName) =>
+    DAYS_LIST.find((d) => d.label === dayName)?.short || dayName;
+
+  const updateHours = (sDay, eDay, oTime, cTime) => {
+    setStartDay(sDay);
+    setEndDay(eDay);
+    setOpenTime(oTime);
+    setCloseTime(cTime);
+
+    const startShort = getShortDay(sDay);
+    const endShort = getShortDay(eDay);
+
+    const dayText =
+      !eDay || eDay === "None" || eDay === sDay
+        ? startShort
+        : `${startShort} - ${endShort}`;
+
+    let result = "";
+    if (oTime === "Open 24 Hours" || cTime === "Open 24 Hours") {
+      result = `${dayText}: Open 24 Hours`;
+    } else if (cTime === "Closed") {
+      result = `${dayText}: Closed`;
+    } else {
+      result = `${dayText}: ${oTime} - ${cTime}`;
+    }
+
+    onChange({ target: { value: result } });
+  };
+
+  return (
+    <div className="space-y-2 bg-stone-50/80 p-3.5 rounded-xl border border-stone-200/80">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-semibold text-stone-700">
+          Business Hours
+        </label>
+        <span className="text-xs font-semibold text-emerald-800 bg-emerald-100/80 px-2.5 py-0.5 rounded-full">
+          {value || "Not set"}
+        </span>
+      </div>
+
+      {/* Select Dropdowns Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 pt-1">
+        <div>
+          <label className="text-[11px] font-medium text-stone-500 mb-1 block">
+            Start Day
+          </label>
+          <select
+            value={startDay}
+            onChange={(e) =>
+              updateHours(e.target.value, endDay, openTime, closeTime)
+            }
+            className="w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2 text-xs text-stone-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+          >
+            {DAYS_LIST.map((d) => (
+              <option key={d.label} value={d.label}>
+                {d.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="text-[11px] font-medium text-stone-500 mb-1 block">
+            End Day
+          </label>
+          <select
+            value={endDay}
+            onChange={(e) =>
+              updateHours(startDay, e.target.value, openTime, closeTime)
+            }
+            className="w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2 text-xs text-stone-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+          >
+            <option value="None">Same Day Only</option>
+            {DAYS_LIST.map((d) => (
+              <option key={d.label} value={d.label}>
+                {d.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="text-[11px] font-medium text-stone-500 mb-1 block">
+            Opening Time
+          </label>
+          <select
+            value={openTime}
+            onChange={(e) =>
+              updateHours(startDay, endDay, e.target.value, closeTime)
+            }
+            className="w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2 text-xs text-stone-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+          >
+            {TIME_OPTIONS.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="text-[11px] font-medium text-stone-500 mb-1 block">
+            Closing Time
+          </label>
+          <select
+            value={closeTime}
+            onChange={(e) =>
+              updateHours(startDay, endDay, openTime, e.target.value)
+            }
+            className="w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2 text-xs text-stone-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+          >
+            {TIME_OPTIONS.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function BusinessDetailsFields({
   name,
   setName,
@@ -36,6 +217,8 @@ export default function BusinessDetailsFields({
   setOtherSocialLink,
   servicesTags,
   setServicesTags,
+  occasions,
+  setOccasions,
   website,
   setWebsite,
   plan,
@@ -191,112 +374,10 @@ export default function BusinessDetailsFields({
         </div>
       </div>
 
-      <div>
-        <label className="block text-[13px] font-semibold mb-1.5">Business hours</label>
-        <div className="bg-stone-50/80 p-4 rounded-xl border border-stone-200/80 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-[12px] text-gray-500 font-medium">Selected Hours:</span>
-            <span className="text-xs font-semibold text-emerald-800 bg-emerald-100 px-3 py-1 rounded-full">
-              {businessHours || "Not set"}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 pt-1">
-            <div>
-              <label className="text-[11px] font-medium text-stone-500 mb-1 block">Start Day</label>
-              <select
-                onChange={(e) => {
-                  const sDay = e.target.value;
-                  const currentParts = (businessHours || "Mon - Fri: 9:00 AM - 6:00 PM").split(":");
-                  const timePart = currentParts[1] || " 9:00 AM - 6:00 PM";
-                  const dayParts = (currentParts[0] || "Mon - Fri").split("-");
-                  const endShort = dayParts[1]?.trim() || "Fri";
-                  const startShort = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].indexOf(sDay)] || sDay.slice(0, 3);
-                  setBusinessHours(`${startShort} - ${endShort}:${timePart}`);
-                }}
-                className="w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2 text-xs text-stone-800 outline-none focus:border-emerald-600"
-              >
-                {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((d) => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="text-[11px] font-medium text-stone-500 mb-1 block">End Day</label>
-              <select
-                onChange={(e) => {
-                  const eDay = e.target.value;
-                  const currentParts = (businessHours || "Mon - Fri: 9:00 AM - 6:00 PM").split(":");
-                  const timePart = currentParts[1] || " 9:00 AM - 6:00 PM";
-                  const dayParts = (currentParts[0] || "Mon - Fri").split("-");
-                  const startShort = dayParts[0]?.trim() || "Mon";
-                  if (eDay === "None") {
-                    setBusinessHours(`${startShort}:${timePart}`);
-                  } else {
-                    const endShort = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].indexOf(eDay)] || eDay.slice(0, 3);
-                    setBusinessHours(`${startShort} - ${endShort}:${timePart}`);
-                  }
-                }}
-                className="w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2 text-xs text-stone-800 outline-none focus:border-emerald-600"
-              >
-                <option value="None">Same Day Only</option>
-                {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((d) => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="text-[11px] font-medium text-stone-500 mb-1 block">Opening Time</label>
-              <select
-                onChange={(e) => {
-                  const open = e.target.value;
-                  const currentParts = (businessHours || "Mon - Fri: 9:00 AM - 6:00 PM").split(":");
-                  const dayPart = currentParts[0] || "Mon - Fri";
-                  const times = (currentParts[1] || "").split("-");
-                  const closePart = times[1]?.trim() || "6:00 PM";
-                  if (open === "Open 24 Hours") {
-                    setBusinessHours(`${dayPart}: Open 24 Hours`);
-                  } else {
-                    setBusinessHours(`${dayPart}: ${open} - ${closePart}`);
-                  }
-                }}
-                className="w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2 text-xs text-stone-800 outline-none focus:border-emerald-600"
-              >
-                {["6:00 AM", "6:30 AM", "7:00 AM", "7:30 AM", "8:00 AM", "8:30 AM", "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM", "12:00 PM", "12:30 PM", "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM", "3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM", "5:00 PM", "5:30 PM", "6:00 PM", "6:30 PM", "7:00 PM", "7:30 PM", "8:00 PM", "8:30 PM", "9:00 PM", "9:30 PM", "10:00 PM", "10:30 PM", "11:00 PM", "11:30 PM", "12:00 AM", "Open 24 Hours"].map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="text-[11px] font-medium text-stone-500 mb-1 block">Closing Time</label>
-              <select
-                onChange={(e) => {
-                  const close = e.target.value;
-                  const currentParts = (businessHours || "Mon - Fri: 9:00 AM - 6:00 PM").split(":");
-                  const dayPart = currentParts[0] || "Mon - Fri";
-                  const times = (currentParts[1] || "").split("-");
-                  const openPart = times[0]?.trim() || "9:00 AM";
-                  if (close === "Closed") {
-                    setBusinessHours(`${dayPart}: Closed`);
-                  } else if (close === "Open 24 Hours") {
-                    setBusinessHours(`${dayPart}: Open 24 Hours`);
-                  } else {
-                    setBusinessHours(`${dayPart}: ${openPart} - ${close}`);
-                  }
-                }}
-                className="w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2 text-xs text-stone-800 outline-none focus:border-emerald-600"
-              >
-                {["4:00 PM", "4:30 PM", "5:00 PM", "5:30 PM", "6:00 PM", "6:30 PM", "7:00 PM", "7:30 PM", "8:00 PM", "8:30 PM", "9:00 PM", "9:30 PM", "10:00 PM", "10:30 PM", "11:00 PM", "11:30 PM", "12:00 AM", "Closed", "Open 24 Hours"].map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
+      <BusinessHoursField
+        value={businessHours}
+        onChange={(e) => setBusinessHours(e.target.value)}
+      />
 
       <div>
         <label className="block text-[13px] font-semibold mb-1.5">
@@ -356,6 +437,20 @@ export default function BusinessDetailsFields({
         />
         <div className="text-[11.5px] text-gray-500 mt-1">
           This helps people find you when searching for specific services
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-[13px] font-semibold mb-1.5">Occasions</label>
+        <input
+          type="text"
+          placeholder="comma separated, e.g. Wedding, Bar Mitzvah, Purim, Baby"
+          value={occasions}
+          onChange={(e) => setOccasions(e.target.value)}
+          className={inputCls}
+        />
+        <div className="text-[11.5px] text-gray-500 mt-1">
+          Specify occasions relevant to your business
         </div>
       </div>
 
