@@ -67,6 +67,10 @@ export const businessDirectoryApi = api.injectEndpoints({
         return `/business/filter/?${params.toString()}`;
       },
     }),
+    getWebsiteVisitors: builder.query({
+      query: () => "/website-visitors/",
+      providesTags: ["website-visitors"],
+    }),
   }),
 });
 
@@ -85,4 +89,5 @@ export const {
   useUploadMediaMutation,
   useRegisterBusinessMutation,
   useUpdatePlanMutation,
+  useGetWebsiteVisitorsQuery,
 } = businessDirectoryApi;

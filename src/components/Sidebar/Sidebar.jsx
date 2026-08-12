@@ -1,6 +1,6 @@
 import { Link, NavLink } from "react-router-dom";
 import "./Sidebar.css";
-import { LuCircleUserRound, LuDollarSign, LuDumbbell, LuMapPin } from "react-icons/lu";
+import { LuCircleUserRound, LuDollarSign, LuDumbbell, LuMapPin, LuMessageSquareMore, LuUsers } from "react-icons/lu";
 import { LogOut } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { logout } from "../../features/authSlice";
@@ -66,10 +66,19 @@ export default function Sidebar() {
           </li>
           <li>
             <NavLink
+              to={"/website-visitors"}
+              className="flex items-center px-8 py-4 hover:bg-white hover:text-primary"
+            >
+              <LuUsers className="text-xl mr-3" />
+              Website Visitors
+            </NavLink>
+          </li>
+          <li>
+            <NavLink
               to={"/message"}
               className="flex items-center px-8 py-4 hover:bg-white hover:text-primary"
             >
-              <LuDollarSign className="text-xl mr-3" />
+              <LuMessageSquareMore className="text-xl mr-3" />
             Message
             </NavLink>
           </li>
@@ -87,7 +96,7 @@ export default function Sidebar() {
               to={"/profile"}
               className="flex items-center px-8 py-4 hover:bg-white hover:text-primary"
             >
-              <LuDollarSign className="text-xl mr-3" />
+              <LuCircleUserRound className="mr-3 text-2xl" />
               Admin Profile
             </NavLink>
           </li>

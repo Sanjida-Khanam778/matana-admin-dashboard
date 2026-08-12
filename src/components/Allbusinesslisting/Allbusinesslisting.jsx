@@ -943,7 +943,10 @@ function EditModal({ business, onClose, onSave, isSaving }) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 border border-stone-100 p-4 rounded-xl bg-white">
             {/* Flyer Image */}
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-stone-700">Flyer Image</label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-stone-700">Flyer Image</label>
+                <span className="text-[10px] text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded font-medium">800×600 px</span>
+              </div>
               {flyerUrl ? (
                 <img
                   src={flyerUrl}
@@ -956,7 +959,7 @@ function EditModal({ business, onClose, onSave, isSaving }) {
                 </div>
               )}
               <UploadBox
-                label="Click to upload flyer"
+                label="Click to upload flyer (800×600 px)"
                 files={flyerFiles}
                 onAdd={(files) => setFlyerFiles(files.slice(0, 1))}
                 onRemove={() => setFlyerFiles([])}
@@ -965,7 +968,10 @@ function EditModal({ business, onClose, onSave, isSaving }) {
 
             {/* Banner Image */}
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-stone-700">Banner Image</label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-stone-700">Banner Image</label>
+                <span className="text-[10px] text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded font-medium">1200×400 px</span>
+              </div>
               {bannerUrl ? (
                 <img
                   src={bannerUrl}
@@ -978,7 +984,7 @@ function EditModal({ business, onClose, onSave, isSaving }) {
                 </div>
               )}
               <UploadBox
-                label="Click to upload banner"
+                label="Click to upload banner (1200×400 px)"
                 files={bannerFiles}
                 onAdd={(files) => setBannerFiles(files.slice(0, 1))}
                 onRemove={() => setBannerFiles([])}
@@ -991,9 +997,12 @@ function EditModal({ business, onClose, onSave, isSaving }) {
                 <label className="text-xs font-semibold text-stone-700">
                   Photo Gallery
                 </label>
-                <span className="text-[11px] text-stone-400">
-                  ({(activeBusiness.photos?.length || 0) + galleryFiles.length} / {planMeta.maxPhotos})
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded font-medium">800×600 px</span>
+                  <span className="text-[11px] text-stone-400">
+                    ({(activeBusiness.photos?.length || 0) + galleryFiles.length} / {planMeta.maxPhotos})
+                  </span>
+                </div>
               </div>
               <div className="flex gap-1.5 overflow-x-auto pb-1 max-h-28">
                 {activeBusiness.photos && activeBusiness.photos.length > 0 ? (
@@ -1014,7 +1023,7 @@ function EditModal({ business, onClose, onSave, isSaving }) {
 
               {planMeta.maxPhotos > 0 ? (
                 <UploadBox
-                  label={`Upload gallery (up to ${planMeta.maxPhotos})`}
+                  label={`Upload gallery 800×600 px (up to ${planMeta.maxPhotos})`}
                   multiple
                   files={galleryFiles}
                   onAdd={handleAddGallery}
@@ -1241,7 +1250,7 @@ export default function AllBusinessListing() {
   };
 
   return (
-    <div className="bg-[#F4F1EA] p-6 sm:p-10 h-screen overflow-hidden">
+    <div className="bg-[#F4F1EA] p-6 sm:p-10 ">
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
           <h1 className="text-xl font-bold text-stone-900">
@@ -1254,7 +1263,7 @@ export default function AllBusinessListing() {
             title="Email all listed businesses"
           >
             <Mail size={16} />
-            Email All Businesses ({allBusinessEmails.length})
+            Email All Businesses ({businesses.length})
           </button>
         </div>
 
@@ -1299,7 +1308,7 @@ export default function AllBusinessListing() {
 
           {/* Table */}
           {isLoading ? (
-            <div className="flex items-center justify-center py-20 gap-3 text-stone-400">
+            <div className="flex items-center justify-center py-20 gap-3 text-stone-400 h-[70vh]">
               <Loader2 size={20} className="animate-spin" />
               <span className="text-sm">Loading businesses…</span>
             </div>

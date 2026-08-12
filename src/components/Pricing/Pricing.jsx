@@ -397,7 +397,7 @@ export default function Pricing() {
         <div className="text-xs sm:text-sm tracking-widest uppercase text-primary font-semibold mb-4">
           MATANA &middot; BUSINESS DIRECTORY
         </div>
-        <h1 className="font-playfair font-bold text-3xl md:text-4xl max-w-xl mx-auto mb-4">
+        <h1 className="font-playfair font-medium text-3xl md:text-4xl max-w-xl mx-auto mb-4">
           Give your business a home in the community.
         </h1>
         <p className="max-w-md mx-auto text-gray-500 text-[15px] leading-relaxed">

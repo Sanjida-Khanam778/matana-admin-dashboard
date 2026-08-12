@@ -435,6 +435,25 @@ export const authApi = api.injectEndpoints({
       invalidatesTags: ["business"],
     }),
 
+    // Get Pending Business Updates (Edit Requests)
+    getPendingUpdates: builder.query({
+      query: () => ({
+        url: "businesses/pending-updates/",
+        method: "GET",
+      }),
+      providesTags: ["business"],
+    }),
+
+    // Approve or Reject Pending Business Update (Edit Request)
+    approveRejectUpdate: builder.mutation({
+      query: ({ id, action }) => ({
+        url: `businesses/${id}/approve-reject-update/`,
+        method: "POST",
+        body: { action },
+      }),
+      invalidatesTags: ["business"],
+    }),
+
     // Get categories
     getCategories: builder.query({
       query: () => ({
@@ -562,6 +581,8 @@ export const {
   useUpdateProfileMutation,
   useGetCommisionRateQuery,
   useGetBusinessesListQuery,
+  useGetPendingUpdatesQuery,
+  useApproveRejectUpdateMutation,
   useGetBusinessByIdQuery,
   useApproveBusinessMutation,
   useRejectBusinessMutation,

@@ -11,6 +11,7 @@ import Pricing from "../components/Pricing/Pricing";
 import Message from "../components/Message/Message";
 import Communities from "../components/Communities/Communities";
 import Plans from "../components/Plans/Plans";
+import WebsiteVisitors from "../components/WebsiteVisitors/WebsiteVisitors";
 
 export const router = createBrowserRouter([
   {
@@ -41,6 +42,10 @@ export const router = createBrowserRouter([
       {
         path: "/communities",
         element: <Communities />,
+      },
+      {
+        path: "/website-visitors",
+        element: <WebsiteVisitors />,
       },
       {
         path: "/profile",

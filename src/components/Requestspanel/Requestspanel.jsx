@@ -3,6 +3,8 @@ import { X, Loader2, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react
 import toast from "react-hot-toast";
 import {
   useGetBusinessesListQuery,
+  useGetPendingUpdatesQuery,
+  useApproveRejectUpdateMutation,
   useApproveBusinessMutation,
   useRejectBusinessMutation,
 } from "../../Api/dashboardApi";
@@ -305,6 +307,121 @@ function ReviewModal({ open, onClose, business }) {
   );
 }
 
+/* Edit Request Card */
+function EditRequestCard({ item }) {
+  const [approveRejectUpdate, { isLoading: isProcessing }] = useApproveRejectUpdateMutation();
+
+  const handleApprove = async () => {
+    try {
+      await approveRejectUpdate({ id: item.id, action: "approve" }).unwrap();
+      toast.success(`Updates for ${item.name} approved!`);
+    } catch {
+      toast.error("Failed to approve changes.");
+    }
+  };
+
+  const handleReject = async () => {
+    try {
+      await approveRejectUpdate({ id: item.id, action: "reject" }).unwrap();
+      toast.success(`Updates for ${item.name} rejected.`);
+    } catch {
+      toast.error("Failed to reject changes.");
+    }
+  };
+
+  const requestedChanges = item.requested_changes || {};
+  const changeEntries = Object.entries(requestedChanges);
+
+  return (
+    <div className="rounded-2xl bg-white border border-stone-100 shadow-sm p-5 sm:p-6 flex flex-col space-y-4">
+      {/* Header Info */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-stone-100 pb-3">
+        <div>
+          <span className="text-[11px] font-semibold text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+            Edit Request
+          </span>
+          <h3 className="text-base font-bold text-stone-900 mt-1">
+            {item.name} <span className="text-xs font-normal text-stone-400">(ID #{item.id})</span>
+          </h3>
+        </div>
+
+        <div className="text-xs text-stone-500 space-y-0.5 sm:text-right">
+          {item.contact_name && (
+            <p>
+              Requested by: <span className="font-semibold text-stone-700">{item.contact_name}</span>
+            </p>
+          )}
+          {item.contact_email && (
+            <p>
+              Email:{" "}
+              <a href={`mailto:${item.contact_email}`} className="text-emerald-700 hover:underline">
+                {item.contact_email}
+              </a>
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Requested Changes Details */}
+      <div className="flex-1">
+        <h4 className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">
+          Requested Field Changes ({changeEntries.length})
+        </h4>
+        {changeEntries.length > 0 ? (
+          <div className="space-y-3 bg-stone-50/80 p-4 rounded-xl border border-stone-100">
+            {changeEntries.map(([key, val]) => (
+              <div key={key} className="text-xs border-b border-stone-200/60 pb-2 last:border-0 last:pb-0">
+                <span className="font-bold text-stone-700 capitalize block mb-0.5">
+                  {key.replace(/_/g, " ")}:
+                </span>
+                {typeof val === "object" && val !== null ? (
+                  val.url ? (
+                    <div className="mt-1">
+                      <img
+                        src={mediaUrl(val.url)}
+                        alt={key}
+                        className="h-28 object-contain rounded-lg border border-stone-200 bg-white"
+                      />
+                    </div>
+                  ) : (
+                    <pre className="mt-1 text-[11px] font-mono text-stone-600 bg-stone-100 p-2 rounded max-h-40 overflow-y-auto">
+                      {JSON.stringify(val, null, 2)}
+                    </pre>
+                  )
+                ) : (
+                  <div className="text-stone-800 bg-white p-2.5 rounded-lg border border-stone-200/80 font-normal leading-relaxed break-words">
+                    {String(val)}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-stone-400 italic">No specific field changes found.</p>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-3 pt-2 mt-auto">
+        <button
+          onClick={handleReject}
+          disabled={isProcessing}
+          className="flex-1 rounded-xl border border-stone-200 py-2.5 text-xs font-semibold text-stone-600 hover:bg-stone-50 transition-colors disabled:opacity-60"
+        >
+          {isProcessing ? "Processing..." : "Reject"}
+        </button>
+        <button
+          onClick={handleApprove}
+          disabled={isProcessing}
+          className="flex-1 rounded-xl bg-emerald-800 py-2.5 text-xs font-semibold text-white hover:bg-emerald-900 transition-colors disabled:opacity-60 shadow-sm"
+        >
+          {isProcessing ? "Processing..." : "Approve Changes"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* Main Panel */
 export default function RequestsPanel() {
   const [tab, setTab] = useState("new");
@@ -314,153 +431,200 @@ export default function RequestsPanel() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(6);
 
-  const { data: businesses = [], isLoading, isError, error } = useGetBusinessesListQuery();
+  const {
+    data: businesses = [],
+    isLoading: isLoadingNew,
+    isError: isErrorNew,
+    error: errorNew,
+  } = useGetBusinessesListQuery();
+
+  const {
+    data: pendingUpdates = [],
+    isLoading: isLoadingEdit,
+    isError: isErrorEdit,
+    error: errorEdit,
+  } = useGetPendingUpdatesQuery();
 
   // Reset to page 1 whenever tab or itemsPerPage changes
   useEffect(() => {
     setCurrentPage(1);
   }, [tab, itemsPerPage]);
 
-  const totalItems = businesses?.length || 0;
+  const activeList = tab === "new" ? businesses : pendingUpdates;
+  const isLoading = tab === "new" ? isLoadingNew : isLoadingEdit;
+  const isError = tab === "new" ? isErrorNew : isErrorEdit;
+  const error = tab === "new" ? errorNew : errorEdit;
+
+  const totalItems = activeList?.length || 0;
   const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
-  const paginatedBusinesses = businesses.slice(startIndex, endIndex);
+  const paginatedList = activeList.slice(startIndex, endIndex);
 
   return (
-    <div className="bg-[#F4F1EA] p-6 sm:p-10">
+    <div className="bg-[#F4F1EA] p-6 sm:p-10 min-h-screen">
       <div className="mx-auto max-w-5xl">
         <div className="mb-6">
           <h1 className="text-xl font-bold text-stone-900">Requests Panel</h1>
           <p className="text-sm text-stone-500 mt-0.5">
-            Review and approve business submissions and updates
+            Review and approve business submissions and edit requests
           </p>
         </div>
 
-        {tab === "new" ? (
-          <>
-            {isLoading && (
-              <div className="flex items-center justify-center py-20 gap-2 text-stone-400">
-                <Loader2 className="animate-spin" size={20} />
-                <span className="text-sm">Loading businesses...</span>
-              </div>
-            )}
+        {/* Tab Switcher */}
+        <div className="flex border-b border-stone-200 mb-6 gap-6">
+          <button
+            onClick={() => setTab("new")}
+            className={`pb-3 text-sm font-semibold border-b-2 transition-colors ${
+              tab === "new"
+                ? "border-emerald-800 text-stone-900"
+                : "border-transparent text-stone-400 hover:text-stone-600"
+            }`}
+          >
+            New Business ({businesses.length})
+          </button>
 
-            {isError && (
-              <div className="flex items-center gap-2 rounded-xl bg-red-50 border border-red-100 text-red-600 px-4 py-3 text-sm">
-                <AlertCircle size={16} />
-                {error?.data?.detail || "Failed to load businesses."}
-              </div>
-            )}
+          <button
+            onClick={() => setTab("edit")}
+            className={`pb-3 text-sm font-semibold border-b-2 transition-colors ${
+              tab === "edit"
+                ? "border-emerald-800 text-stone-900"
+                : "border-transparent text-stone-400 hover:text-stone-600"
+            }`}
+          >
+            Edit Requests ({pendingUpdates.length})
+          </button>
+        </div>
 
-            {!isLoading && !isError && totalItems === 0 && (
-              <div className="rounded-2xl bg-white border border-stone-100 shadow-sm p-10 text-center text-sm text-stone-400">
-                No new listing requests to show right now.
-              </div>
-            )}
+        {/* Tab Content */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-20 gap-2 text-stone-400">
+            <Loader2 className="animate-spin" size={20} />
+            <span className="text-sm">
+              Loading {tab === "new" ? "new business submissions" : "edit requests"}...
+            </span>
+          </div>
+        )}
 
-            {!isLoading && !isError && totalItems > 0 && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {paginatedBusinesses.map((business) => (
-                    <ListingCard
-                      key={business.id}
-                      business={business}
-                      onReview={(b) => setSelectedBusiness(b)}
-                    />
-                  ))}
-                </div>
+        {isError && (
+          <div className="flex items-center gap-2 rounded-xl bg-red-50 border border-red-100 text-red-600 px-4 py-3 text-sm">
+            <AlertCircle size={16} />
+            {error?.data?.detail || "Failed to load requests."}
+          </div>
+        )}
 
-                {/* Pagination Footer */}
-                <div className="rounded-2xl bg-white border border-stone-100 shadow-sm px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div className="flex items-center gap-4 text-xs text-stone-500">
-                    <span>
-                      Showing{" "}
-                      <strong className="font-semibold text-stone-800">
-                        {startIndex + 1}
-                      </strong>{" "}
-                      to{" "}
-                      <strong className="font-semibold text-stone-800">
-                        {endIndex}
-                      </strong>{" "}
-                      of{" "}
-                      <strong className="font-semibold text-stone-800">
-                        {totalItems}
-                      </strong>{" "}
-                      requests
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <label htmlFor="requestItemsPerPage" className="text-stone-400">
-                        Per page:
-                      </label>
-                      <select
-                        id="requestItemsPerPage"
-                        value={itemsPerPage}
-                        onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                        className="rounded-lg border border-stone-200 bg-white px-2 py-1 text-xs text-stone-700 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
-                      >
-                        {[6, 9, 12, 24, 48].map((num) => (
-                          <option key={num} value={num}>
-                            {num}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {totalPages > 1 && (
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                        disabled={currentPage === 1}
-                        className="inline-flex items-center justify-center rounded-lg border border-stone-200 bg-white p-2 text-stone-600 hover:bg-stone-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                        title="Previous page"
-                      >
-                        <ChevronLeft size={16} />
-                      </button>
-
-                      {getPageNumbers(currentPage, totalPages).map((p, idx) =>
-                        typeof p === "number" ? (
-                          <button
-                            key={p}
-                            onClick={() => setCurrentPage(p)}
-                            className={`min-w-[32px] h-8 px-2 rounded-lg text-xs font-medium transition-colors ${
-                              currentPage === p
-                                ? "bg-emerald-800 text-white shadow-sm"
-                                : "border border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
-                            }`}
-                          >
-                            {p}
-                          </button>
-                        ) : (
-                          <span
-                            key={`ellipsis-${idx}`}
-                            className="px-1 text-xs text-stone-400 select-none"
-                          >
-                            {p}
-                          </span>
-                        )
-                      )}
-
-                      <button
-                        onClick={() =>
-                          setCurrentPage((p) => Math.min(totalPages, p + 1))
-                        }
-                        disabled={currentPage === totalPages}
-                        className="inline-flex items-center justify-center rounded-lg border border-stone-200 bg-white p-2 text-stone-600 hover:bg-stone-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                        title="Next page"
-                      >
-                        <ChevronRight size={16} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </>
-        ) : (
+        {!isLoading && !isError && totalItems === 0 && (
           <div className="rounded-2xl bg-white border border-stone-100 shadow-sm p-10 text-center text-sm text-stone-400">
-            No updated requests to show right now.
+            {tab === "new"
+              ? "No new business registration requests right now."
+              : "No pending edit requests right now."}
+          </div>
+        )}
+
+        {!isLoading && !isError && totalItems > 0 && (
+          <div className="space-y-6">
+            {tab === "new" ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {paginatedList.map((business) => (
+                  <ListingCard
+                    key={business.id}
+                    business={business}
+                    onReview={(b) => setSelectedBusiness(b)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {paginatedList.map((item) => (
+                  <EditRequestCard key={item.id} item={item} />
+                ))}
+              </div>
+            )}
+
+            {/* Pagination Footer */}
+            <div className="rounded-2xl bg-white border border-stone-100 shadow-sm px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4 text-xs text-stone-500">
+                <span>
+                  Showing{" "}
+                  <strong className="font-semibold text-stone-800">
+                    {startIndex + 1}
+                  </strong>{" "}
+                  to{" "}
+                  <strong className="font-semibold text-stone-800">
+                    {endIndex}
+                  </strong>{" "}
+                  of{" "}
+                  <strong className="font-semibold text-stone-800">
+                    {totalItems}
+                  </strong>{" "}
+                  requests
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <label htmlFor="requestItemsPerPage" className="text-stone-400">
+                    Per page:
+                  </label>
+                  <select
+                    id="requestItemsPerPage"
+                    value={itemsPerPage}
+                    onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                    className="rounded-lg border border-stone-200 bg-white px-2 py-1 text-xs text-stone-700 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+                  >
+                    {[6, 9, 12, 24, 48].map((num) => (
+                      <option key={num} value={num}>
+                        {num}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="inline-flex items-center justify-center rounded-lg border border-stone-200 bg-white p-2 text-stone-600 hover:bg-stone-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    title="Previous page"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+
+                  {getPageNumbers(currentPage, totalPages).map((p, idx) =>
+                    typeof p === "number" ? (
+                      <button
+                        key={p}
+                        onClick={() => setCurrentPage(p)}
+                        className={`min-w-[32px] h-8 px-2 rounded-lg text-xs font-medium transition-colors ${
+                          currentPage === p
+                            ? "bg-emerald-800 text-white shadow-sm"
+                            : "border border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    ) : (
+                      <span
+                        key={`ellipsis-${idx}`}
+                        className="px-1 text-xs text-stone-400 select-none"
+                      >
+                        {p}
+                      </span>
+                    )
+                  )}
+
+                  <button
+                    onClick={() =>
+                      setCurrentPage((p) => Math.min(totalPages, p + 1))
+                    }
+                    disabled={currentPage === totalPages}
+                    className="inline-flex items-center justify-center rounded-lg border border-stone-200 bg-white p-2 text-stone-600 hover:bg-stone-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    title="Next page"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

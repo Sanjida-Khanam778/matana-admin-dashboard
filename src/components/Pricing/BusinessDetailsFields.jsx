@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Plus, Trash2 } from "lucide-react";
 import UploadBox from "./UploadBox";
 
 const DAYS_LIST = [
@@ -55,130 +55,167 @@ const TIME_OPTIONS = [
 ];
 
 function BusinessHoursField({ value, onChange }) {
-  const [startDay, setStartDay] = useState("Monday");
-  const [endDay, setEndDay] = useState("Friday");
-  const [openTime, setOpenTime] = useState("9:00 AM");
-  const [closeTime, setCloseTime] = useState("6:00 PM");
+  const [rows, setRows] = useState([
+    { startDay: "Monday", endDay: "Friday", openTime: "9:00 AM", closeTime: "6:00 PM" },
+  ]);
 
   const getShortDay = (dayName) =>
     DAYS_LIST.find((d) => d.label === dayName)?.short || dayName;
 
-  const updateHours = (sDay, eDay, oTime, cTime) => {
-    setStartDay(sDay);
-    setEndDay(eDay);
-    setOpenTime(oTime);
-    setCloseTime(cTime);
-
-    const startShort = getShortDay(sDay);
-    const endShort = getShortDay(eDay);
+  const formatRowText = (r) => {
+    const startShort = getShortDay(r.startDay);
+    const endShort = getShortDay(r.endDay);
 
     const dayText =
-      !eDay || eDay === "None" || eDay === sDay
+      !r.endDay || r.endDay === "None" || r.endDay === r.startDay
         ? startShort
         : `${startShort} - ${endShort}`;
 
-    let result = "";
-    if (oTime === "Open 24 Hours" || cTime === "Open 24 Hours") {
-      result = `${dayText}: Open 24 Hours`;
-    } else if (cTime === "Closed") {
-      result = `${dayText}: Closed`;
-    } else {
-      result = `${dayText}: ${oTime} - ${cTime}`;
+    if (r.openTime === "Open 24 Hours" || r.closeTime === "Open 24 Hours") {
+      return `${dayText}: Open 24 Hours`;
+    } else if (r.closeTime === "Closed" || r.openTime === "Closed") {
+      return `${dayText}: Closed`;
     }
+    return `${dayText}: ${r.openTime} - ${r.closeTime}`;
+  };
 
+  const updateRows = (newRows) => {
+    setRows(newRows);
+    const result = newRows.map(formatRowText).join(", ");
     onChange({ target: { value: result } });
   };
 
+  const updateRowField = (idx, field, val) => {
+    const updated = rows.map((r, i) => (i === idx ? { ...r, [field]: val } : r));
+    updateRows(updated);
+  };
+
+  const addRow = () => {
+    const nextRow = {
+      startDay: "Sunday",
+      endDay: "None",
+      openTime: "10:00 AM",
+      closeTime: "4:00 PM",
+    };
+    updateRows([...rows, nextRow]);
+  };
+
+  const removeRow = (idx) => {
+    if (rows.length === 1) return;
+    const updated = rows.filter((_, i) => i !== idx);
+    updateRows(updated);
+  };
+
   return (
-    <div className="space-y-2 bg-stone-50/80 p-3.5 rounded-xl border border-stone-200/80">
-      <div className="flex items-center justify-between">
+    <div className="space-y-3 bg-stone-50/80 p-3.5 sm:p-4 rounded-xl border border-stone-200/80">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <label className="text-xs font-semibold text-stone-700">
           Business Hours
         </label>
-        <span className="text-xs font-semibold text-emerald-800 bg-emerald-100/80 px-2.5 py-0.5 rounded-full">
+        <span className="text-xs font-semibold text-emerald-800 bg-emerald-100/80 px-2.5 py-0.5 rounded-full max-w-full truncate">
           {value || "Not set"}
         </span>
       </div>
 
-      {/* Select Dropdowns Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 pt-1">
-        <div>
-          <label className="text-[11px] font-medium text-stone-500 mb-1 block">
-            Start Day
-          </label>
-          <select
-            value={startDay}
-            onChange={(e) =>
-              updateHours(e.target.value, endDay, openTime, closeTime)
-            }
-            className="w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2 text-xs text-stone-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+      {/* Rows List */}
+      <div className="space-y-3">
+        {rows.map((row, idx) => (
+          <div
+            key={idx}
+            className="grid grid-cols-1 sm:grid-cols-9 gap-2 items-end p-2.5 bg-white rounded-lg border border-stone-200"
           >
-            {DAYS_LIST.map((d) => (
-              <option key={d.label} value={d.label}>
-                {d.label}
-              </option>
-            ))}
-          </select>
-        </div>
+            <div className="sm:col-span-2">
+              <label className="text-[11px] font-medium text-stone-500 mb-1 block">
+                Start Day
+              </label>
+              <select
+                value={row.startDay}
+                onChange={(e) => updateRowField(idx, "startDay", e.target.value)}
+                className="w-full rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-xs text-stone-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+              >
+                {DAYS_LIST.map((d) => (
+                  <option key={d.label} value={d.label}>
+                    {d.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        <div>
-          <label className="text-[11px] font-medium text-stone-500 mb-1 block">
-            End Day
-          </label>
-          <select
-            value={endDay}
-            onChange={(e) =>
-              updateHours(startDay, e.target.value, openTime, closeTime)
-            }
-            className="w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2 text-xs text-stone-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
-          >
-            <option value="None">Same Day Only</option>
-            {DAYS_LIST.map((d) => (
-              <option key={d.label} value={d.label}>
-                {d.label}
-              </option>
-            ))}
-          </select>
-        </div>
+            <div className="sm:col-span-2">
+              <label className="text-[11px] font-medium text-stone-500 mb-1 block">
+                End Day
+              </label>
+              <select
+                value={row.endDay}
+                onChange={(e) => updateRowField(idx, "endDay", e.target.value)}
+                className="w-full rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-xs text-stone-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+              >
+                <option value="None">Same Day Only</option>
+                {DAYS_LIST.map((d) => (
+                  <option key={d.label} value={d.label}>
+                    {d.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        <div>
-          <label className="text-[11px] font-medium text-stone-500 mb-1 block">
-            Opening Time
-          </label>
-          <select
-            value={openTime}
-            onChange={(e) =>
-              updateHours(startDay, endDay, e.target.value, closeTime)
-            }
-            className="w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2 text-xs text-stone-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
-          >
-            {TIME_OPTIONS.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </div>
+            <div className="sm:col-span-2">
+              <label className="text-[11px] font-medium text-stone-500 mb-1 block">
+                Opening Time
+              </label>
+              <select
+                value={row.openTime}
+                onChange={(e) => updateRowField(idx, "openTime", e.target.value)}
+                className="w-full rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-xs text-stone-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+              >
+                {TIME_OPTIONS.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        <div>
-          <label className="text-[11px] font-medium text-stone-500 mb-1 block">
-            Closing Time
-          </label>
-          <select
-            value={closeTime}
-            onChange={(e) =>
-              updateHours(startDay, endDay, openTime, e.target.value)
-            }
-            className="w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2 text-xs text-stone-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
-          >
-            {TIME_OPTIONS.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </div>
+            <div className="sm:col-span-2">
+              <label className="text-[11px] font-medium text-stone-500 mb-1 block">
+                Closing Time
+              </label>
+              <select
+                value={row.closeTime}
+                onChange={(e) => updateRowField(idx, "closeTime", e.target.value)}
+                className="w-full rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-xs text-stone-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+              >
+                {TIME_OPTIONS.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="sm:col-span-1 flex justify-end">
+              {rows.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeRow(idx)}
+                  className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition cursor-pointer"
+                  title="Remove this schedule row"
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
+
+      <button
+        type="button"
+        onClick={addRow}
+        className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-800 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition border border-emerald-200 cursor-pointer"
+      >
+        <Plus size={14} /> Add Hours Row
+      </button>
     </div>
   );
 }
@@ -493,14 +530,17 @@ export default function BusinessDetailsFields({
 
       {plan === "featured" && (
         <div>
-          <label className="block text-[13px] font-semibold mb-1.5">
-            Photo gallery{" "}
-            <span className="text-gray-500 font-normal text-[12px]">
-              (up to 5 photos — {galleryFiles.length} / 5 added)
-            </span>
-          </label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-[13px] font-semibold">
+              Photo gallery{" "}
+              <span className="text-gray-500 font-normal text-[12px]">
+                (up to 5 photos — {galleryFiles.length} / 5 added)
+              </span>
+            </label>
+           
+          </div>
           <UploadBox
-            label="Click to upload photos (JPG or PNG)"
+            label="Click to upload photos (800×600 px, JPG or PNG)"
             multiple
             files={galleryFiles}
             onAdd={handleAddGallery}
@@ -513,14 +553,17 @@ export default function BusinessDetailsFields({
       {plan === "premium" && (
         <>
           <div>
-            <label className="block text-[13px] font-semibold mb-1.5">
-              Photo gallery{" "}
-              <span className="text-gray-500 font-normal text-[12px]">
-                (up to 10 photos — {galleryFiles.length} / 10 added)
-              </span>
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-[13px] font-semibold">
+                Photo gallery{" "}
+                <span className="text-gray-500 font-normal text-[12px]">
+                  (up to 10 photos — {galleryFiles.length} / 10 added)
+                </span>
+              </label>
+            
+            </div>
             <UploadBox
-              label="Click to upload photos (JPG or PNG)"
+              label="Click to upload photos (800×600 px, JPG or PNG)"
               multiple
               files={galleryFiles}
               onAdd={handleAddGallery}
@@ -547,11 +590,14 @@ export default function BusinessDetailsFields({
       )}
 
       <div>
-        <label className="block text-[13px] font-semibold mb-1.5">
-          Flyer image <span className="text-red-500">*</span>
-        </label>
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="block text-[13px] font-semibold">
+            Flyer image <span className="text-red-500">*</span>
+          </label>
+          
+        </div>
         <UploadBox
-          label="Click to upload your flyer (JPG or PNG)"
+          label="Click to upload your flyer (600×600 px, JPG or PNG)"
           files={flyerFiles}
           onAdd={(newFiles) => setFlyerFiles(newFiles.slice(0, 1))}
           onRemove={() => setFlyerFiles([])}
@@ -559,11 +605,14 @@ export default function BusinessDetailsFields({
       </div>
 
       <div>
-        <label className="block text-[13px] font-semibold mb-1.5">
-          Banner image
-        </label>
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="block text-[13px] font-semibold">
+            Banner image
+          </label>
+         
+        </div>
         <UploadBox
-          label="Click to upload your banner (JPG or PNG)"
+          label="Click to upload your banner (1200×400 px, JPG or PNG)"
           files={bannerFiles}
           onAdd={(newFiles) => setBannerFiles(newFiles.slice(0, 1))}
           onRemove={() => setBannerFiles([])}
