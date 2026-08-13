@@ -102,10 +102,20 @@ export default function PaymentSection({
                   <span className="font-medium text-gray-800">${parseFloat(orderSummary.base_monthly_price).toFixed(2)}/mo</span>
                 </div>
                 {orderSummary.discount_amount > 0 && (
-                  <div className="flex justify-between text-[12.5px] text-green-700">
-                    <span>Discount ({orderSummary.discount_percent}% off)</span>
-                    <span className="font-semibold">-${parseFloat(orderSummary.discount_amount).toFixed(2)}</span>
-                  </div>
+                  <>
+                    <div className="flex justify-between text-[12.5px] text-green-700">
+                      <span>Discount ({orderSummary.discount_percent}% off)</span>
+                      <span className="font-semibold">-${parseFloat(orderSummary.discount_amount).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-[12.5px] text-green-700">
+                      <span>Monthly payment after discount</span>
+                      <span className="font-semibold">
+                        $
+                      {orderSummary?.final_monthly_price}
+                        /mo
+                      </span>
+                    </div>
+                  </>
                 )}
                 <div className="border-t border-gray-100 pt-2 mt-1 flex justify-between">
                   <span className="text-[13px] font-bold text-gray-900">Total</span>
