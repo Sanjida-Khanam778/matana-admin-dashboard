@@ -476,7 +476,7 @@ export default function Communities() {
         </div>
 
         {isLoading && (
-          <div className="flex items-center justify-center py-20 gap-2 text-stone-400">
+          <div className="flex items-center h-[80vh] justify-center py-20 gap-2 text-stone-400">
             <Loader2 className="animate-spin" size={20} />
             <span className="text-sm">Loading communities...</span>
           </div>

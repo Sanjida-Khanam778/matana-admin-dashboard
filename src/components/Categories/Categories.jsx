@@ -256,7 +256,7 @@ export default function Categories() {
         </div>
 
         {isLoading && (
-          <div className="flex items-center justify-center py-20 gap-2 text-stone-400">
+          <div className="flex items-center justify-center py-20 gap-2 text-stone-400 h-[80vh]">
             <Loader2 className="animate-spin" size={20} />
             <span className="text-sm">Loading categories...</span>
           </div>

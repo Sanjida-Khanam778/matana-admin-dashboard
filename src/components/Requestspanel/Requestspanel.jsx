@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { X, Loader2, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import toast from "react-hot-toast";
 import {
@@ -462,7 +462,7 @@ export default function RequestsPanel() {
   const paginatedList = activeList.slice(startIndex, endIndex);
 
   return (
-    <div className="bg-[#F4F1EA] p-6 sm:p-10 min-h-screen">
+    <div className="bg-[#F4F1EA] p-6 sm:p-10">
       <div className="mx-auto max-w-5xl">
         <div className="mb-6">
           <h1 className="text-xl font-bold text-stone-900">Requests Panel</h1>
@@ -498,7 +498,7 @@ export default function RequestsPanel() {
 
         {/* Tab Content */}
         {isLoading && (
-          <div className="flex items-center justify-center py-20 gap-2 text-stone-400">
+          <div className="flex items-center justify-center py-20 gap-2 text-stone-400 h-[80vh]">
             <Loader2 className="animate-spin" size={20} />
             <span className="text-sm">
               Loading {tab === "new" ? "new business submissions" : "edit requests"}...
@@ -514,7 +514,7 @@ export default function RequestsPanel() {
         )}
 
         {!isLoading && !isError && totalItems === 0 && (
-          <div className="rounded-2xl bg-white border border-stone-100 shadow-sm p-10 text-center text-sm text-stone-400">
+          <div className="rounded-2xl h-[70vh] border border-stone-100 shadow-sm p-10 text-center text-sm text-stone-400">
             {tab === "new"
               ? "No new business registration requests right now."
               : "No pending edit requests right now."}
