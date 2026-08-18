@@ -557,7 +557,7 @@ export default function BusinessDetailsFields({
               <label className="block text-[13px] font-semibold">
                 Photo gallery{" "}
                 <span className="text-gray-500 font-normal text-[12px]">
-                  (up to 10 photos — {galleryFiles.length} / 10 added)
+                  (up to 5 photos, included with Premium Partner — {galleryFiles.length} / 5 added)
                 </span>
               </label>
             

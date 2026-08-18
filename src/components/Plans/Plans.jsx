@@ -51,11 +51,11 @@ const PLAN_META = {
       "Homepage placement in Carousel",
       "Top result in relevant searches",
       "Featured on Social Media",
-      "Photo Gallery (up to 10 photos) & Promo Video",
+      "Photo gallery (up to 5 photos, included with Premium Partner)",
       "Post sales, events & announcements",
       "Business Description (up to 10 lines)",
     ],
-    maxPhotos: 10,
+    maxPhotos: 5,
     maxDescChars: 500,
   },
 };

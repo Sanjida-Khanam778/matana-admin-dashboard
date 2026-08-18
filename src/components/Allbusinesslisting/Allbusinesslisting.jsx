@@ -244,7 +244,7 @@ const PLAN_META = {
   },
   premium: {
     name: "Premium Partner",
-    maxPhotos: 10,
+    maxPhotos: 5,
     maxDescChars: 500, // ~10 lines
   },
 };
@@ -995,7 +995,12 @@ function EditModal({ business, onClose, onSave, isSaving }) {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-semibold text-stone-700">
-                  Photo Gallery
+                  Photo Gallery{" "}
+                  {planMeta.maxPhotos > 0 && (
+                    <span className="text-[11px] font-normal text-stone-500">
+                      (up to {planMeta.maxPhotos} photos{planTier === "premium" ? ", included with Premium Partner" : ""})
+                    </span>
+                  )}
                 </label>
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded font-medium">800×600 px</span>

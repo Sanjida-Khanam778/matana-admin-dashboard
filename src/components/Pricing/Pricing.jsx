@@ -57,11 +57,11 @@ const PLAN_META = {
       "Homepage placement in the Carousel",
       "Top result in relevant searches",
       "Featured on Social Media",
-      "Photo Gallery & Promo Video",
+      "Photo Gallery (up to 5 photos) & Promo Video",
       "Ability to post sales, events, and announcements",
       "Business Description (up to 10 lines)",
     ],
-    maxPhotos: 10,
+    maxPhotos: 5,
     maxDescChars: 500,
   },
 };
@@ -81,8 +81,23 @@ export default function Pricing() {
   const [uploadMedia] = useUploadMediaMutation();
   const [registerBusiness, { isLoading: submitting }] = useRegisterBusinessMutation();
 
-  const [plan, setPlan] = useState("standard");
-  const planMeta = PLAN_META[plan] ?? PLAN_META.standard;
+  const [selectedPlanCard, setSelectedPlanCard] = useState(null);
+  const activePlan = selectedPlanCard || "standard";
+  const planMeta = PLAN_META[activePlan];
+
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  const handleSelectPlan = (selectedPlanId) => {
+    setSelectedPlanCard(selectedPlanId);
+    setTimeout(() => {
+      if (formRef.current) {
+        formRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 100);
+  };
 
   const PLANS = (plansData ?? []).map((p) => ({
     id: p.tier,
@@ -198,7 +213,7 @@ export default function Pricing() {
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  const selectedPlanApi = (plansData ?? []).find((p) => p.tier === plan);
+  const selectedPlanApi = (plansData ?? []).find((p) => p.tier === activePlan);
   const descOverLimit = description.length > planMeta.maxDescChars;
 
   const orderSummaryArgs = selectedPlanApi?.id
@@ -221,12 +236,9 @@ export default function Pricing() {
     } else {
       setGalleryWarning("");
     }
-  }, [plan]);
+  }, [activePlan]);
 
-  useEffect(() => {
-    if (formRef.current)
-      formRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [plan]);
+
 
   const handleAddGallery = (newFiles) => {
     setGalleryWarning("");
@@ -355,7 +367,7 @@ export default function Pricing() {
       photo_ids: photoIds,
       flyer_image: flyerImageId,
       banner: bannerImageId,
-      ...(plan === "premium" && promoVideoLink ? { promo_video_link: promoVideoLink } : {}),
+      ...(activePlan === "premium" && promoVideoLink ? { promo_video_link: promoVideoLink } : {}),
     };
 
     await registerBusiness(body).unwrap();
@@ -397,7 +409,7 @@ export default function Pricing() {
         <div className="text-xs sm:text-sm tracking-widest uppercase text-primary font-semibold mb-4">
           MATANA &middot; BUSINESS DIRECTORY
         </div>
-        <h1 className="font-playfair font-medium text-3xl md:text-4xl max-w-xl mx-auto mb-4">
+        <h1 className="font-playfair font-bold text-3xl md:text-4xl max-w-xl mx-auto mb-4">
           Give your business a home in the community.
         </h1>
         <p className="max-w-md mx-auto text-gray-500 text-[15px] leading-relaxed">
@@ -409,9 +421,9 @@ export default function Pricing() {
       <div className="max-w-5xl mx-auto px-6 pb-20">
         <PlanSelection
           plans={PLANS}
-          currentPlan={plan}
+          currentPlan={selectedPlanCard}
           plansLoading={plansLoading}
-          onSelectPlan={setPlan}
+          onSelectPlan={handleSelectPlan}
         />
 
         <div ref={formRef} className="bg-white rounded-3xl p-6 md:p-9 mt-8 space-y-5">
@@ -471,7 +483,7 @@ export default function Pricing() {
             setOccasions={setOccasions}
             website={website}
             setWebsite={setWebsite}
-            plan={plan}
+            plan={activePlan}
             planMeta={planMeta}
             descOverLimit={descOverLimit}
             galleryFiles={galleryFiles}
