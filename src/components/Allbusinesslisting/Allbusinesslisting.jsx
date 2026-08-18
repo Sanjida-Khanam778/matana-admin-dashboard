@@ -1273,22 +1273,7 @@ export default function AllBusinessListing() {
         </div>
 
         <div className="rounded-2xl bg-white border border-stone-100 shadow-sm overflow-hidden">
-          {/* Tabs */}
-          <div className="px-6 pt-5 flex gap-6 border-b border-stone-100">
-            {["All", "Featured"].map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
-                  tab === t
-                    ? "border-emerald-800 text-stone-900"
-                    : "border-transparent text-stone-400 hover:text-stone-600"
-                }`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
+ 
 
           {/* Filters */}
           <div className="px-6 py-4 flex flex-col sm:flex-row gap-3">
@@ -1304,11 +1289,11 @@ export default function AllBusinessListing() {
                 className="w-full rounded-lg border border-stone-200 pl-9 pr-3 py-2.5 text-sm text-stone-700 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
               />
             </div>
-            <Dropdown
+            {/* <Dropdown
               value={statusFilter}
               options={statuses}
               onChange={setStatusFilter}
-            />
+            /> */}
           </div>
 
           {/* Table */}
