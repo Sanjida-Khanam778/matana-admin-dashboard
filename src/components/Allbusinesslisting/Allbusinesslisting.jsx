@@ -1200,18 +1200,18 @@ export default function AllBusinessListing() {
     data: businesses = [],
     isLoading,
     isError,
-  } = useGetBusinessesListQuery();
+  } = useGetBusinessesListQuery(search);
   const [updateBusiness, { isLoading: isSaving }] = useUpdateBusinessMutation();
   const [deleteBusiness, { isLoading: isDeleting }] =
     useDeleteBusinessMutation();
 
   const statuses = ["All Status", ...STATUS_OPTIONS];
 
-  const filtered = businesses.filter((b) => {
+  const businessList = Array.isArray(businesses) ? businesses : businesses?.results || [];
+
+  const filtered = businessList.filter((b) => {
     if (tab === "Featured" && !b.is_featured) return false;
     if (statusFilter !== "All Status" && b.status !== statusFilter)
-      return false;
-    if (search && !b.name.toLowerCase().includes(search.toLowerCase()))
       return false;
     return true;
   });
@@ -1255,8 +1255,8 @@ export default function AllBusinessListing() {
   };
 
   return (
-    <div className="bg-[#F4F1EA] p-6 sm:p-10 ">
-      <div className="mx-auto max-w-6xl">
+    <div className="bg-[#F4F1EA] p-6 sm:p-10 h-screen">
+      <div className="mx-auto max-w-7xl">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
           <h1 className="text-xl font-bold text-stone-900">
             All Business Listing
@@ -1298,7 +1298,7 @@ export default function AllBusinessListing() {
 
           {/* Table */}
           {isLoading ? (
-            <div className="flex items-center justify-center py-20 gap-3 text-stone-400 h-[70vh]">
+            <div className="flex items-center justify-center py-20 gap-3 text-stone-400">
               <Loader2 size={20} className="animate-spin" />
               <span className="text-sm">Loading businesses…</span>
             </div>
@@ -1316,6 +1316,8 @@ export default function AllBusinessListing() {
                     <th className="px-6 py-3 font-medium">Categories</th>
                     <th className="px-6 py-3 font-medium">City</th>
                     <th className="px-6 py-3 font-medium">Plan</th>
+                    <th className="px-6 py-3 font-medium">Payment Type</th>
+                    <th className="px-6 py-3 font-medium">Duration (Months)</th>
                     <th className="px-6 py-3 font-medium">Status</th>
                     <th className="px-6 py-3 font-medium text-right">Actions</th>
                   </tr>
@@ -1325,6 +1327,8 @@ export default function AllBusinessListing() {
                     const imgUrl = getFlyerUrl(b.flyer_image);
                     const catNames = getCategoryNames(b.categories);
                     const planLabel = b.plan?.tier ?? "—";
+                    const duration   = b?.duration_months ?? "—";
+                    const payment_type = b?.payment_type ?? "—";
 
                     return (
                       <tr
@@ -1369,6 +1373,12 @@ export default function AllBusinessListing() {
                         </td>
                         <td className="px-6 py-4 text-stone-500 capitalize">
                           {planLabel}
+                        </td>
+                        <td className="px-6 py-4 text-stone-500 capitalize">
+                          {payment_type}
+                        </td>
+                        <td className="px-6 py-4 text-stone-500">
+                          {duration}
                         </td>
                         <td className="px-6 py-4">
                           <StatusPill status={b.status} />

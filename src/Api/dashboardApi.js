@@ -380,12 +380,21 @@ export const authApi = api.injectEndpoints({
 
 
 
-    // Businesses list
+    // Businesses list & search
     getBusinessesList: builder.query({
-      query: () => ({
-        url: "admin/businesses/list/",
-        method: "GET",
-      }),
+      query: (search) => {
+        const searchStr = typeof search === "string" ? search.trim() : search?.search?.trim();
+        if (searchStr) {
+          return {
+            url: `admin/businesses/search/?search=${encodeURIComponent(searchStr)}`,
+            method: "GET",
+          };
+        }
+        return {
+          url: "admin/businesses/list/",
+          method: "GET",
+        };
+      },
       providesTags: ["business"],
     }),
 

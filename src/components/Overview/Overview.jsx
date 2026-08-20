@@ -132,13 +132,13 @@ export default function Overview() {
                     Recent Activity
                   </h2>
                 </div>
-                <Link
+                {/* <Link
                   to="/listings"
                   className="flex items-center gap-1 text-xs font-medium text-emerald-700 hover:text-emerald-800 transition-colors"
                 >
                   View all
                   <ChevronRight size={14} />
-                </Link>
+                </Link> */}
               </div>
 
               {recentActivity.length === 0 ? (
