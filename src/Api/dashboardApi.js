@@ -482,6 +482,16 @@ export const authApi = api.injectEndpoints({
       invalidatesTags: ["category"],
     }),
 
+    // Update a category
+    updateCategory: builder.mutation({
+      query: ({ id, ...body }) => ({
+        url: `categories/${id}/`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: ["category"],
+    }),
+
     // Delete a category
     deleteCategory: builder.mutation({
       query: (id) => ({
@@ -513,6 +523,15 @@ export const authApi = api.injectEndpoints({
       query: (body) => ({
         url: "communities/",
         method: "POST",
+        body,
+      }),
+      invalidatesTags: ["community"],
+    }),
+
+    updateCommunity: builder.mutation({
+      query: ({ id, ...body }) => ({
+        url: `communities/${id}/`,
+        method: "PATCH",
         body,
       }),
       invalidatesTags: ["community"],
@@ -597,12 +616,14 @@ export const {
   useRejectBusinessMutation,
   useGetCategoriesQuery,
   useCreateCategoryMutation,
+  useUpdateCategoryMutation,
   useDeleteCategoryMutation,
   useUploadMediaMutation,
   useUpdateBusinessMutation,
   useDeleteBusinessMutation,
   useGetCommunitiesQuery,
   useCreateCommunityMutation,
+  useUpdateCommunityMutation,
   useDeleteCommunityMutation,
   useGetMapCommunitiesQuery,
   useUpdateMapCommunitiesMutation,

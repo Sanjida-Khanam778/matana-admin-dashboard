@@ -10,11 +10,13 @@ import {
   MapPin,
   Check,
   Search,
+  Pencil,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import {
   useGetCommunitiesQuery,
   useCreateCommunityMutation,
+  useUpdateCommunityMutation,
   useDeleteCommunityMutation,
   useUploadMediaMutation,
   useGetMapCommunitiesQuery,
@@ -374,7 +376,181 @@ function AddCommunityModal({ open, onClose }) {
   );
 }
 
-function CommunityCard({ comm, openMenu, onToggleMenu, onRemove }) {
+function EditCommunityModal({ open, onClose, community }) {
+  const [name, setName] = useState("");
+  const [stateName, setStateName] = useState("");
+  const [file, setFile] = useState(null);
+  const [imageId, setImageId] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState("");
+
+  const fileInputRef = useRef(null);
+
+  const [updateCommunity, { isLoading: isUpdating }] = useUpdateCommunityMutation();
+  const [uploadMedia, { isLoading: isUploading }] = useUploadMediaMutation();
+
+  useEffect(() => {
+    if (community) {
+      setName(community.name || "");
+      setStateName(community.state || "");
+      setPreviewUrl(mediaUrl(community.image) || "");
+      setImageId(null);
+      setFile(null);
+    }
+  }, [community]);
+
+  if (!open || !community) return null;
+
+  const handleFileChange = async (e) => {
+    const selectedFile = e.target.files[0];
+    if (!selectedFile) return;
+
+    setFile(selectedFile);
+    setPreviewUrl(URL.createObjectURL(selectedFile));
+
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+
+    try {
+      const res = await uploadMedia(formData).unwrap();
+      setImageId(res.id);
+      toast.success("Image uploaded successfully!");
+    } catch (err) {
+      console.log("Upload with 'file' key failed, retrying with 'image' key...", err);
+      const retryFormData = new FormData();
+      retryFormData.append("image", selectedFile);
+      try {
+        const res = await uploadMedia(retryFormData).unwrap();
+        setImageId(res[0]?.id || res?.id);
+        toast.success("Image uploaded successfully!");
+      } catch (retryErr) {
+        toast.error("Failed to upload cover image.");
+        console.error(retryErr);
+      }
+    }
+  };
+
+  const handleUpdate = async () => {
+    if (!name.trim()) {
+      toast.error("Community name is required.");
+      return;
+    }
+
+    try {
+      const payload = {
+        name: name.trim(),
+      };
+      if (stateName.trim()) {
+        payload.state = stateName.trim();
+      }
+      if (imageId) {
+        payload.image = imageId;
+      }
+
+      await updateCommunity({
+        id: community.id,
+        ...payload,
+      }).unwrap();
+
+      toast.success("Community updated successfully!");
+      onClose();
+    } catch (err) {
+      toast.error(err?.data?.detail || err?.data?.message || "Failed to update community.");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 backdrop-blur-[2px] p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
+        <div className="flex items-center justify-between px-6 pt-5 pb-4">
+          <h2 className="text-[15px] font-semibold text-stone-900">
+            Edit Community
+          </h2>
+          <button
+            onClick={onClose}
+            className="rounded-full p-1 text-stone-400 hover:bg-stone-100 hover:text-stone-600 transition-colors"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="px-6 pb-6 space-y-5">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-stone-500">
+              Community Name
+            </label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Monsey, Austin"
+              className="w-full rounded-lg border border-stone-200 px-3 py-2.5 text-sm text-stone-800 placeholder:text-stone-400 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-stone-500">
+              State
+            </label>
+            <input
+              value={stateName}
+              onChange={(e) => setStateName(e.target.value)}
+              placeholder="e.g. NY, TX"
+              className="w-full rounded-lg border border-stone-200 px-3 py-2.5 text-sm text-stone-800 placeholder:text-stone-400 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-stone-500">
+              Cover Image
+            </label>
+            <div className="grid grid-cols-4 gap-2">
+              <div className="col-span-1 h-16 rounded-lg border border-dashed border-stone-200 bg-stone-50 overflow-hidden flex items-center justify-center">
+                {previewUrl ? (
+                  <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-[10px] text-stone-400">Empty</span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                className="col-span-1 h-16 flex flex-col items-center justify-center gap-1 rounded-lg border border-stone-200 text-stone-400 hover:border-emerald-600 hover:text-emerald-600 transition-colors disabled:opacity-60"
+              >
+                <UploadCloud size={16} />
+                <span className="text-[11px] font-medium">{isUploading ? "Uploading..." : "Upload"}</span>
+              </button>
+            </div>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept="image/*"
+              className="hidden"
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-3 px-6 pb-6">
+          <button
+            onClick={onClose}
+            className="flex-1 rounded-lg border border-stone-200 py-2.5 text-sm font-medium text-stone-600 hover:bg-stone-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleUpdate}
+            disabled={isUpdating || isUploading}
+            className="flex-1 rounded-lg bg-emerald-800 py-2.5 text-sm font-medium text-white hover:bg-emerald-900 transition-colors disabled:opacity-60"
+          >
+            {isUpdating ? "Updating..." : "Save Changes"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CommunityCard({ comm, openMenu, onToggleMenu, onEdit, onRemove }) {
   const isOpen = openMenu === comm.id;
   const imgSrc = mediaUrl(comm.image);
 
@@ -409,7 +585,20 @@ function CommunityCard({ comm, openMenu, onToggleMenu, onRemove }) {
       {isOpen && (
         <div className="absolute top-10 right-2 z-20 w-32 rounded-xl bg-white shadow-lg border border-stone-100 py-1">
           <button
-            onClick={() => onRemove(comm.id)}
+            onClick={() => {
+              onEdit(comm);
+              onToggleMenu(null);
+            }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-stone-700 hover:bg-stone-50 transition-colors"
+          >
+            <Pencil size={13} />
+            Edit
+          </button>
+          <button
+            onClick={() => {
+              onRemove(comm.id);
+              onToggleMenu(null);
+            }}
             className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
           >
             <Trash2 size={13} />
@@ -425,6 +614,7 @@ export default function Communities() {
   const [openMenu, setOpenMenu] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [mapModalOpen, setMapModalOpen] = useState(false);
+  const [editingCommunity, setEditingCommunity] = useState(null);
 
   const { data: list = [], isLoading, isError, error } = useGetCommunitiesQuery();
   const [deleteCommunity] = useDeleteCommunityMutation();
@@ -503,6 +693,7 @@ export default function Communities() {
                   comm={comm}
                   openMenu={openMenu}
                   onToggleMenu={toggleMenu}
+                  onEdit={setEditingCommunity}
                   onRemove={handleRemove}
                 />
               </div>
@@ -511,6 +702,11 @@ export default function Communities() {
         )}
       </div>
       <AddCommunityModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <EditCommunityModal
+        open={Boolean(editingCommunity)}
+        community={editingCommunity}
+        onClose={() => setEditingCommunity(null)}
+      />
       <SelectMapCommunitiesModal
         open={mapModalOpen}
         onClose={() => setMapModalOpen(false)}
